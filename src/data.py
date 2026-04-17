@@ -3,7 +3,9 @@ from pybaseball import statcast
 import pandas as pd
 from tqdm import tqdm
 import os
+import time
 
+MAX_RETRIES = 3
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
@@ -14,8 +16,8 @@ def get_pitching_stats_year(year: int) -> None:
         print(f"{year} already finished")
         return
     
-    # MLB Season is March - September 
-    df = statcast(f'{year}-03-01', f'{year}-09-30')
+    # MLB Season is March - September
+    df = statcast(f'{year}-03-01', f'{year}-09-30', parallel=False)
 
     stats_record = ['pitcher', 'player_name', 'p_throws', 'pitch_type', 'pitch_name', 
     'release_speed', 'release_spin_rate', 'pfx_x', 'pfx_z', 'release_extension',
@@ -72,5 +74,18 @@ if __name__ == "__main__":
     pybaseball.cache.enable()
     # Pulling from 2015 with Statcast's introduction 
     for year in tqdm(range(2015, 2026)):
-        print(f"Processing year: {year}")
-        get_pitching_stats_year(year)
+        # Reset is needed to prevent rate limits, if the 3 retries fail, call python again
+        for i in range(MAX_RETRIES):
+            try:
+                print(f"Processing year: {year}")
+                if i > 0: print(f"Retry attempt {i} of {MAX_RETRIES}")
+                get_pitching_stats_year(year)
+                break
+            except Exception as e:
+                if i < MAX_RETRIES - 1:
+                    print(f"Error pulling data due to rate limit for {year}")
+                    print("Waiting 10 seconds")
+                    time.sleep(10)
+                else:
+                    print(f"All retires exhausted for {year} moving on to next year")
+                    print(f"Please call data.py again for {year}")
