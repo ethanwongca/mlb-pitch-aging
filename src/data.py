@@ -2,22 +2,22 @@ import pybaseball
 from pybaseball import statcast 
 import pandas as pd
 from tqdm import tqdm
-import os
+from pathlib import Path
 import time
 
 MAX_RETRIES = 3
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
 
-def get_pitching_stats_year(year: int) -> None:
+def get_pitching_stats_year(year: int, parallel: bool = False) -> None:
     # Skipping if intial pull crashes
-    path = f"{DATA_DIR}/pitching_stats_{year}.parquet"
-    if os.path.exists(path):
+    data_path = DATA_DIR / f"pitching_stats_{year}.parquet"
+    if data_path.exists():
         print(f"{year} already finished")
         return
     
     # MLB Season is March - September
-    df = statcast(f'{year}-03-01', f'{year}-09-30', parallel=False)
+    df = statcast(f'{year}-03-01', f'{year}-09-30', parallel=parallel)
 
     stats_record = ['pitcher', 'player_name', 'p_throws', 'pitch_type', 'pitch_name', 
     'release_speed', 'release_spin_rate', 'pfx_x', 'pfx_z', 'release_extension',
@@ -65,8 +65,8 @@ def get_pitching_stats_year(year: int) -> None:
     agg = agg[agg["n_pitches"] > 150]
     agg["year"] = year
 
-    os.makedirs(DATA_DIR, exist_ok=True)
-    agg.to_parquet(f"{DATA_DIR}/pitching_stats_{year}.parquet", index=False)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    agg.to_parquet(DATA_DIR / f"pitching_stats_{year}.parquet", index=False)
 
     print(f"Finished {year} with {len(agg)} rows")
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
             try:
                 print(f"Processing year: {year}")
                 if i > 0: print(f"Retry attempt {i} of {MAX_RETRIES}")
-                get_pitching_stats_year(year)
+                get_pitching_stats_year(year, parallel=True)
                 break
             except Exception as e:
                 if i < MAX_RETRIES - 1:
@@ -87,5 +87,5 @@ if __name__ == "__main__":
                     print("Waiting 10 seconds")
                     time.sleep(10)
                 else:
-                    print(f"All retires exhausted for {year} moving on to next year")
+                    print(f"All retries exhausted for {year} moving on to next year")
                     print(f"Please call data.py again for {year}")
