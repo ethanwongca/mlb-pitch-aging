@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
+MASTER_DATA_DIR = BASE_DIR / "master_data"
 
 def build_id_map() -> pd.DataFrame:
     """Bridge MLBAM IDs to birth years via Chadwick + Lahman People.csv"""
@@ -61,7 +62,8 @@ if __name__ == "__main__":
     df["age"] = df["age"].astype(int)
 
     # Save master
-    out_path = DATA_DIR / "pitching_master.csv"
+    MASTER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = MASTER_DATA_DIR / "pitching_master.csv"
     df.to_csv(out_path, index=False)
     print(f"Saved {out_path.name} with {len(df)} rows")
     print(f"Age range: {df['age'].min()}–{df['age'].max()}")
