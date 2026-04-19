@@ -11,7 +11,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "master_data"
-PLOTS_DIR = BASE_DIR / "plots"
+PLOTS_DIR = BASE_DIR / "eda_plots"
 
 VALID_PITCH_TYPES = ["FF", "SL", "SI", "CH", "CU", "FC"]
 
