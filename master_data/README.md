@@ -56,8 +56,6 @@ Spin axis data is unavailable prior to 2020. All values are NaN for 2015–2019.
 | `age_c_sq` | float | years² | Centered age squared — `age_c²`. Enables quadratic aging curve estimation |
 
 ## Notes
-
-- **Pitch type coverage:** FF (4-seam fastball), SL (slider), SI (sinker), CH (changeup), CU (curveball), FC (cutter). Rare pitch types (KN, FO, FA, EP) and post-2022 reclassifications (ST sweeper) excluded.
 - **2020 season:** Shortened to 60 games due to COVID-19. Fewer pitcher-seasons and higher variance expected.
 - **2021 spin rate:** MLB introduced sticky substance enforcement mid-2021. Population-wide spin rate drop visible in this season. Year is included as a fixed effect in all models to absorb this.
 - **pfx_x handedness:** Not normalized for handedness. RHP arm-side run is negative, LHP arm-side run is positive. Account for `p_throws` when analyzing horizontal movement across handedness.
