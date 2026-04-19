@@ -1,0 +1,272 @@
+23:24:30  INFO  Age mean: 29.05
+23:24:30  INFO  Normalized mean_pfx_x into mean_pfx_x_norm using pitcher handedness
+23:24:30  INFO  Loaded 14971 rows across 6 pitch types
+23:24:30  INFO  Outcomes: ['mean_velo', 'mean_spin_rate', 'mean_pfx_x', 'mean_pfx_x_norm', 'mean_pfx_z', 'mean_spin_axis']
+23:24:30  INFO  Experiments: ['base', 'with_ext']
+23:24:30  INFO  ==================================================
+23:24:30  INFO  Experiment: base
+23:24:30  INFO  ==================================================
+23:24:30  INFO  [1/72] Fitting base | FF | mean_velo | n=4489
+23:24:34  INFO  [1/72] base | FF | mean_velo | peak=19.8 | sig | AIC=15482.3 | linear=N
+23:24:34  INFO  [2/72] Fitting base | FF | mean_spin_rate | n=4489
+23:24:38  INFO  [2/72] base | FF | mean_spin_rate | peak=28.2 | sig | AIC=53229.7 | linear=N
+23:24:38  INFO  [3/72] Fitting base | FF | mean_pfx_x | n=4489
+23:24:44  INFO    -> linear preferred (b2 p=0.506, AIC quad=-343.4 vs linear=-344.9)
+23:24:44  INFO  [3/72] base | FF | mean_pfx_x | monotonic | not sig | AIC=-344.9 | linear=Y
+23:24:44  INFO  [4/72] Fitting base | FF | mean_pfx_x_norm | n=4489
+23:24:48  INFO    -> linear preferred (b2 p=0.745, AIC quad=-2458.3 vs linear=-2460.2)
+23:24:48  INFO  [4/72] base | FF | mean_pfx_x_norm | monotonic | not sig | AIC=-2460.2 | linear=Y
+23:24:48  INFO  [5/72] Fitting base | FF | mean_pfx_z | n=4489
+23:24:52  INFO  [5/72] base | FF | mean_pfx_z | peak=28.5 | sig | AIC=-5900.6 | linear=N
+23:24:52  INFO  [6/72] Fitting base | FF | mean_spin_axis | n=4070
+23:24:57  INFO    -> linear preferred (b2 p=0.657, AIC quad=31173.5 vs linear=31171.7)
+23:24:57  INFO  [6/72] base | FF | mean_spin_axis | monotonic | not sig | AIC=31171.7 | linear=Y
+23:24:57  INFO  [7/72] Fitting base | SL | mean_velo | n=2577
+23:24:59  INFO  [7/72] base | SL | mean_velo | peak=23.9 | sig | AIC=10534.7 | linear=N
+23:24:59  INFO  [8/72] Fitting base | SL | mean_spin_rate | n=2577
+23:25:01  INFO  [8/72] base | SL | mean_spin_rate | peak=29.9 | sig | AIC=32915.1 | linear=N
+23:25:01  INFO  [9/72] Fitting base | SL | mean_pfx_x | n=2577
+23:25:04  INFO  [9/72] base | SL | mean_pfx_x | monotonic | not sig | AIC=-329.0 | linear=N
+23:25:04  INFO  [10/72] Fitting base | SL | mean_pfx_x_norm | n=2577
+23:25:07  INFO    -> linear preferred (b2 p=0.403, AIC quad=-936.6 vs linear=-937.9)
+23:25:07  INFO  [10/72] base | SL | mean_pfx_x_norm | monotonic | not sig | AIC=-937.9 | linear=Y
+23:25:07  INFO  [11/72] Fitting base | SL | mean_pfx_z | n=2577
+23:25:10  INFO  [11/72] base | SL | mean_pfx_z | monotonic | sig | AIC=-498.7 | linear=N
+23:25:10  INFO  [12/72] Fitting base | SL | mean_spin_axis | n=2357
+23:25:12  INFO    -> linear preferred (b2 p=0.713, AIC quad=24253.8 vs linear=24251.9)
+23:25:12  INFO  [12/72] base | SL | mean_spin_axis | monotonic | sig | AIC=24251.9 | linear=Y
+23:25:12  INFO  [13/72] Fitting base | SI | mean_velo | n=2480
+23:25:15  INFO  [13/72] base | SI | mean_velo | peak=14.1 | sig | AIC=8919.3 | linear=N
+23:25:15  INFO  [14/72] Fitting base | SI | mean_spin_rate | n=2480
+23:25:17  INFO  [14/72] base | SI | mean_spin_rate | peak=27.8 | sig | AIC=29377.6 | linear=N
+23:25:17  INFO  [15/72] Fitting base | SI | mean_pfx_x | n=2480
+23:25:21  INFO    -> linear preferred (b2 p=0.413, AIC quad=-96.8 vs linear=-98.1)
+23:25:21  INFO  [15/72] base | SI | mean_pfx_x | monotonic | sig | AIC=-98.1 | linear=Y
+23:25:21  INFO  [16/72] Fitting base | SI | mean_pfx_x_norm | n=2480
+23:25:24  INFO    -> linear preferred (b2 p=0.784, AIC quad=-2844.3 vs linear=-2846.2)
+23:25:24  INFO  [16/72] base | SI | mean_pfx_x_norm | monotonic | not sig | AIC=-2846.2 | linear=Y
+23:25:24  INFO  [17/72] Fitting base | SI | mean_pfx_z | n=2480
+23:25:26  INFO  [17/72] base | SI | mean_pfx_z | peak=32.7 | sig | AIC=-1176.9 | linear=N
+23:25:26  INFO  [18/72] Fitting base | SI | mean_spin_axis | n=2231
+23:25:30  INFO    -> linear preferred (b2 p=0.974, AIC quad=18855.1 vs linear=18853.1)
+23:25:30  INFO  [18/72] base | SI | mean_spin_axis | monotonic | sig | AIC=18853.1 | linear=Y
+23:25:30  INFO  [19/72] Fitting base | CH | mean_velo | n=1746
+23:25:32  INFO  [19/72] base | CH | mean_velo | peak=24.1 | sig | AIC=6978.3 | linear=N
+23:25:32  INFO  [20/72] Fitting base | CH | mean_spin_rate | n=1746
+23:25:34  INFO  [20/72] base | CH | mean_spin_rate | peak=25.0 | sig | AIC=22361.2 | linear=N
+23:25:34  INFO  [21/72] Fitting base | CH | mean_pfx_x | n=1746
+23:25:36  INFO  [21/72] base | CH | mean_pfx_x | monotonic | sig | AIC=451.0 | linear=N
+23:25:36  INFO  [22/72] Fitting base | CH | mean_pfx_x_norm | n=1746
+23:25:38  INFO  [22/72] base | CH | mean_pfx_x_norm | monotonic | sig | AIC=-1385.5 | linear=N
+23:25:38  INFO  [23/72] Fitting base | CH | mean_pfx_z | n=1746
+23:25:40  INFO  [23/72] base | CH | mean_pfx_z | monotonic | sig | AIC=-475.0 | linear=N
+23:25:40  INFO  [24/72] Fitting base | CH | mean_spin_axis | n=1581
+23:25:42  INFO  [24/72] base | CH | mean_spin_axis | peak=30.5 | sig | AIC=13489.3 | linear=N
+23:25:42  INFO  [25/72] Fitting base | CU | mean_velo | n=1271
+23:25:44  INFO  [25/72] base | CU | mean_velo | peak=20.4 | sig | AIC=5341.5 | linear=N
+23:25:44  INFO  [26/72] Fitting base | CU | mean_spin_rate | n=1271
+23:25:45  INFO  [26/72] base | CU | mean_spin_rate | peak=27.2 | sig | AIC=16467.7 | linear=N
+23:25:45  INFO  [27/72] Fitting base | CU | mean_pfx_x | n=1271
+23:25:47  INFO  [27/72] base | CU | mean_pfx_x | monotonic | not sig | AIC=573.9 | linear=N
+23:25:47  INFO  [28/72] Fitting base | CU | mean_pfx_x_norm | n=1271
+23:25:49  INFO    -> linear preferred (b2 p=0.693, AIC quad=-181.2 vs linear=-183.0)
+23:25:49  INFO  [28/72] base | CU | mean_pfx_x_norm | monotonic | sig | AIC=-183.0 | linear=Y
+23:25:49  INFO  [29/72] Fitting base | CU | mean_pfx_z | n=1271
+23:25:50  INFO    -> linear preferred (b2 p=0.443, AIC quad=173.4 vs linear=172.0)
+23:25:50  INFO  [29/72] base | CU | mean_pfx_z | monotonic | sig | AIC=172.0 | linear=Y
+23:25:50  INFO  [30/72] Fitting base | CU | mean_spin_axis | n=1152
+23:25:52  INFO    -> linear preferred (b2 p=0.211, AIC quad=11794.5 vs linear=11794.0)
+23:25:52  INFO  [30/72] base | CU | mean_spin_axis | monotonic | not sig | AIC=11794.0 | linear=Y
+23:25:52  INFO  [31/72] Fitting base | FC | mean_velo | n=1115
+23:25:54  INFO  [31/72] base | FC | mean_velo | peak=17.8 | sig | AIC=4333.4 | linear=N
+23:25:54  INFO  [32/72] Fitting base | FC | mean_spin_rate | n=1115
+23:25:55  INFO  [32/72] base | FC | mean_spin_rate | peak=21.0 | sig | AIC=13673.4 | linear=N
+23:25:55  INFO  [33/72] Fitting base | FC | mean_pfx_x | n=1115
+23:25:56  INFO    -> linear preferred (b2 p=0.507, AIC quad=-792.5 vs linear=-794.0)
+23:25:56  INFO  [33/72] base | FC | mean_pfx_x | monotonic | not sig | AIC=-794.0 | linear=Y
+23:25:56  INFO  [34/72] Fitting base | FC | mean_pfx_x_norm | n=1115
+23:25:57  INFO  [34/72] base | FC | mean_pfx_x_norm | peak=27.4 | not sig | AIC=-874.9 | linear=N
+23:25:57  INFO  [35/72] Fitting base | FC | mean_pfx_z | n=1115
+23:25:59  INFO    -> linear preferred (b2 p=0.530, AIC quad=-428.1 vs linear=-429.7)
+23:25:59  INFO  [35/72] base | FC | mean_pfx_z | monotonic | sig | AIC=-429.7 | linear=Y
+23:25:59  INFO  [36/72] Fitting base | FC | mean_spin_axis | n=1033
+23:26:00  INFO    -> linear preferred (b2 p=0.468, AIC quad=9383.0 vs linear=9381.6)
+23:26:00  INFO  [36/72] base | FC | mean_spin_axis | monotonic | not sig | AIC=9381.6 | linear=Y
+23:26:00  INFO  ==================================================
+23:26:00  INFO  Experiment: with_ext
+23:26:00  INFO  ==================================================
+23:26:00  INFO  [37/72] Fitting with_ext | FF | mean_velo | n=4489
+23:26:04  INFO  [37/72] with_ext | FF | mean_velo | peak=19.9 | sig | AIC=15474.0 | linear=N
+23:26:04  INFO  [38/72] Fitting with_ext | FF | mean_spin_rate | n=4489
+23:26:08  INFO  [38/72] with_ext | FF | mean_spin_rate | peak=28.2 | sig | AIC=53231.5 | linear=N
+23:26:08  INFO  [39/72] Fitting with_ext | FF | mean_pfx_x | n=4489
+23:26:14  INFO    -> linear preferred (b2 p=0.458, AIC quad=-344.5 vs linear=-345.9)
+23:26:14  INFO  [39/72] with_ext | FF | mean_pfx_x | monotonic | not sig | AIC=-345.9 | linear=Y
+23:26:14  INFO  [40/72] Fitting with_ext | FF | mean_pfx_x_norm | n=4489
+23:26:18  INFO    -> linear preferred (b2 p=0.941, AIC quad=-2509.5 vs linear=-2511.5)
+23:26:18  INFO  [40/72] with_ext | FF | mean_pfx_x_norm | monotonic | not sig | AIC=-2511.5 | linear=Y
+23:26:18  INFO  [41/72] Fitting with_ext | FF | mean_pfx_z | n=4489
+23:26:22  INFO  [41/72] with_ext | FF | mean_pfx_z | peak=28.8 | sig | AIC=-5900.8 | linear=N
+23:26:22  INFO  [42/72] Fitting with_ext | FF | mean_spin_axis | n=4070
+23:26:27  INFO    -> linear preferred (b2 p=0.803, AIC quad=31164.3 vs linear=31162.4)
+23:26:27  INFO  [42/72] with_ext | FF | mean_spin_axis | monotonic | not sig | AIC=31162.4 | linear=Y
+23:26:27  INFO  [43/72] Fitting with_ext | SL | mean_velo | n=2577
+23:26:29  INFO  [43/72] with_ext | SL | mean_velo | peak=24.1 | sig | AIC=10499.4 | linear=N
+23:26:29  INFO  [44/72] Fitting with_ext | SL | mean_spin_rate | n=2577
+23:26:31  INFO  [44/72] with_ext | SL | mean_spin_rate | peak=29.2 | sig | AIC=32858.9 | linear=N
+23:26:31  INFO  [45/72] Fitting with_ext | SL | mean_pfx_x | n=2577
+23:26:34  INFO  [45/72] with_ext | SL | mean_pfx_x | monotonic | not sig | AIC=-327.0 | linear=N
+23:26:34  INFO  [46/72] Fitting with_ext | SL | mean_pfx_x_norm | n=2577
+23:26:37  INFO    -> linear preferred (b2 p=0.402, AIC quad=-934.6 vs linear=-935.9)
+23:26:37  INFO  [46/72] with_ext | SL | mean_pfx_x_norm | monotonic | not sig | AIC=-935.9 | linear=Y
+23:26:37  INFO  [47/72] Fitting with_ext | SL | mean_pfx_z | n=2577
+23:26:40  INFO  [47/72] with_ext | SL | mean_pfx_z | monotonic | sig | AIC=-544.6 | linear=N
+23:26:40  INFO  [48/72] Fitting with_ext | SL | mean_spin_axis | n=2357
+23:26:42  INFO    -> linear preferred (b2 p=0.705, AIC quad=24255.7 vs linear=24253.9)
+23:26:42  INFO  [48/72] with_ext | SL | mean_spin_axis | monotonic | sig | AIC=24253.9 | linear=Y
+23:26:42  INFO  [49/72] Fitting with_ext | SI | mean_velo | n=2480
+23:26:45  INFO  [49/72] with_ext | SI | mean_velo | peak=14.3 | sig | AIC=8911.3 | linear=N
+23:26:45  INFO  [50/72] Fitting with_ext | SI | mean_spin_rate | n=2480
+23:26:47  INFO  [50/72] with_ext | SI | mean_spin_rate | peak=27.9 | sig | AIC=29379.0 | linear=N
+23:26:47  INFO  [51/72] Fitting with_ext | SI | mean_pfx_x | n=2480
+23:26:51  INFO    -> linear preferred (b2 p=0.415, AIC quad=-95.4 vs linear=-96.8)
+23:26:51  INFO  [51/72] with_ext | SI | mean_pfx_x | monotonic | sig | AIC=-96.8 | linear=Y
+23:26:51  INFO  [52/72] Fitting with_ext | SI | mean_pfx_x_norm | n=2480
+23:26:54  INFO    -> linear preferred (b2 p=0.786, AIC quad=-2864.6 vs linear=-2866.5)
+23:26:54  INFO  [52/72] with_ext | SI | mean_pfx_x_norm | monotonic | not sig | AIC=-2866.5 | linear=Y
+23:26:54  INFO  [53/72] Fitting with_ext | SI | mean_pfx_z | n=2480
+23:26:57  INFO  [53/72] with_ext | SI | mean_pfx_z | peak=33.4 | sig | AIC=-1192.8 | linear=N
+23:26:57  INFO  [54/72] Fitting with_ext | SI | mean_spin_axis | n=2231
+23:27:00  INFO    -> linear preferred (b2 p=0.932, AIC quad=18848.4 vs linear=18846.4)
+23:27:00  INFO  [54/72] with_ext | SI | mean_spin_axis | monotonic | sig | AIC=18846.4 | linear=Y
+23:27:00  INFO  [55/72] Fitting with_ext | CH | mean_velo | n=1746
+23:27:02  INFO  [55/72] with_ext | CH | mean_velo | peak=24.3 | sig | AIC=6977.7 | linear=N
+23:27:02  INFO  [56/72] Fitting with_ext | CH | mean_spin_rate | n=1746
+23:27:04  INFO  [56/72] with_ext | CH | mean_spin_rate | peak=24.7 | sig | AIC=22357.7 | linear=N
+23:27:04  INFO  [57/72] Fitting with_ext | CH | mean_pfx_x | n=1746
+23:27:07  INFO  [57/72] with_ext | CH | mean_pfx_x | monotonic | sig | AIC=448.4 | linear=N
+23:27:07  INFO  [58/72] Fitting with_ext | CH | mean_pfx_x_norm | n=1746
+23:27:09  INFO  [58/72] with_ext | CH | mean_pfx_x_norm | monotonic | sig | AIC=-1384.9 | linear=N
+23:27:09  INFO  [59/72] Fitting with_ext | CH | mean_pfx_z | n=1746
+23:27:11  INFO  [59/72] with_ext | CH | mean_pfx_z | monotonic | sig | AIC=-478.4 | linear=N
+23:27:11  INFO  [60/72] Fitting with_ext | CH | mean_spin_axis | n=1581
+23:27:13  INFO  [60/72] with_ext | CH | mean_spin_axis | peak=30.5 | sig | AIC=13491.3 | linear=N
+23:27:13  INFO  [61/72] Fitting with_ext | CU | mean_velo | n=1271
+23:27:15  INFO  [61/72] with_ext | CU | mean_velo | peak=20.0 | sig | AIC=5341.9 | linear=N
+23:27:15  INFO  [62/72] Fitting with_ext | CU | mean_spin_rate | n=1271
+23:27:16  INFO  [62/72] with_ext | CU | mean_spin_rate | peak=24.6 | sig | AIC=16438.3 | linear=N
+23:27:16  INFO  [63/72] Fitting with_ext | CU | mean_pfx_x | n=1271
+23:27:18  INFO    -> linear preferred (b2 p=0.164, AIC quad=574.5 vs linear=574.5)
+23:27:18  INFO  [63/72] with_ext | CU | mean_pfx_x | monotonic | not sig | AIC=574.5 | linear=Y
+23:27:18  INFO  [64/72] Fitting with_ext | CU | mean_pfx_x_norm | n=1271
+23:27:19  INFO    -> linear preferred (b2 p=0.621, AIC quad=-184.5 vs linear=-186.3)
+23:27:19  INFO  [64/72] with_ext | CU | mean_pfx_x_norm | monotonic | sig | AIC=-186.3 | linear=Y
+23:27:19  INFO  [65/72] Fitting with_ext | CU | mean_pfx_z | n=1271
+23:27:21  INFO    -> linear preferred (b2 p=0.435, AIC quad=175.3 vs linear=173.9)
+23:27:21  INFO  [65/72] with_ext | CU | mean_pfx_z | monotonic | sig | AIC=173.9 | linear=Y
+23:27:21  INFO  [66/72] Fitting with_ext | CU | mean_spin_axis | n=1152
+23:27:23  INFO    -> linear preferred (b2 p=0.174, AIC quad=11793.2 vs linear=11793.0)
+23:27:23  INFO  [66/72] with_ext | CU | mean_spin_axis | monotonic | not sig | AIC=11793.0 | linear=Y
+23:27:23  INFO  [67/72] Fitting with_ext | FC | mean_velo | n=1115
+23:27:24  INFO  [67/72] with_ext | FC | mean_velo | peak=17.8 | sig | AIC=4319.2 | linear=N
+23:27:24  INFO  [68/72] Fitting with_ext | FC | mean_spin_rate | n=1115
+23:27:25  INFO  [68/72] with_ext | FC | mean_spin_rate | peak=20.6 | sig | AIC=13663.9 | linear=N
+23:27:25  INFO  [69/72] Fitting with_ext | FC | mean_pfx_x | n=1115
+23:27:26  INFO    -> linear preferred (b2 p=0.527, AIC quad=-791.1 vs linear=-792.6)
+23:27:26  INFO  [69/72] with_ext | FC | mean_pfx_x | monotonic | not sig | AIC=-792.6 | linear=Y
+23:27:26  INFO  [70/72] Fitting with_ext | FC | mean_pfx_x_norm | n=1115
+23:27:27  INFO  [70/72] with_ext | FC | mean_pfx_x_norm | peak=28.2 | not sig | AIC=-884.8 | linear=N
+23:27:27  INFO  [71/72] Fitting with_ext | FC | mean_pfx_z | n=1115
+23:27:29  INFO    -> linear preferred (b2 p=0.576, AIC quad=-430.1 vs linear=-431.8)
+23:27:29  INFO  [71/72] with_ext | FC | mean_pfx_z | monotonic | sig | AIC=-431.8 | linear=Y
+23:27:29  INFO  [72/72] Fitting with_ext | FC | mean_spin_axis | n=1033
+23:27:29  INFO    -> linear preferred (b2 p=0.464, AIC quad=9385.0 vs linear=9383.5)
+23:27:29  INFO  [72/72] with_ext | FC | mean_spin_axis | monotonic | not sig | AIC=9383.5 | linear=Y
+23:27:29  INFO  Computed 72 models
+23:27:29  INFO  
+==================================================
+23:27:29  INFO  Summary: base — 25/36 significant
+23:27:29  INFO  
+pitch_type         outcome  peak_age  decline_rate_at_mean  is_linear_model      pval_b1      pval_b2          aic
+        FF       mean_velo 19.807411             -0.204744            False 6.334727e-69 3.934184e-24 15482.283511
+        FF  mean_spin_rate 28.246401             -1.196470            False 1.056003e-01 3.962417e-23 53229.668495
+        FF      mean_pfx_z 28.527609             -0.000402            False 6.925190e-01 2.162005e-04 -5900.591215
+        SL       mean_velo 23.907995             -0.134926            False 9.203673e-14 1.133100e-09 10534.747519
+        SL  mean_spin_rate 29.907355              1.524739            False 2.888889e-01 4.394085e-08 32915.144646
+        SL      mean_pfx_z       NaN              0.009334            False 1.628154e-06 7.131777e-02  -498.699705
+        SL  mean_spin_axis       NaN              0.933841             True 4.590049e-02          NaN 24251.904121
+        SI       mean_velo 14.090205             -0.254772            False 5.339352e-54 7.274380e-08  8919.316205
+        SI  mean_spin_rate 27.777228             -1.052525            False 2.826098e-01 3.465266e-05 29377.627917
+        SI      mean_pfx_x       NaN              0.017838             True 1.117256e-02          NaN   -98.080832
+        SI      mean_pfx_z 32.705107              0.004560            False 5.070275e-02 1.636848e-03 -1176.851355
+        SI  mean_spin_axis       NaN             -0.717222             True 2.920341e-02          NaN 18853.057181
+        CH       mean_velo 24.117165             -0.156851            False 4.970902e-11 9.554409e-13  6978.270656
+        CH  mean_spin_rate 25.035143             -6.451457            False 1.499580e-03 7.075240e-06 22361.198063
+        CH      mean_pfx_x       NaN              0.000795            False 9.230998e-01 1.226997e-03   450.970430
+        CH mean_pfx_x_norm       NaN              0.005461            False 2.700346e-03 5.934834e-03 -1385.541306
+        CH      mean_pfx_z       NaN             -0.002869            False 2.708626e-01 1.766751e-02  -474.961447
+        CH  mean_spin_axis 30.455936              0.177023            False 7.090257e-01 1.219671e-04 13489.326438
+        CU       mean_velo 20.406143             -0.198516            False 5.246206e-12 8.876664e-06  5341.517842
+        CU  mean_spin_rate 27.213342             -1.940346            False 3.981887e-01 1.024319e-02 16467.728139
+        CU mean_pfx_x_norm       NaN              0.008753             True 3.052347e-03          NaN  -183.048069
+        CU      mean_pfx_z       NaN              0.009040             True 1.144409e-02          NaN   171.967026
+        FC       mean_velo 17.772998             -0.149361            False 1.157226e-08 1.396754e-02  4333.369214
+        FC  mean_spin_rate 21.000906             -3.955059            False 3.100164e-02 1.505081e-01 13673.399911
+        FC      mean_pfx_z       NaN              0.009013             True 4.541488e-04          NaN  -429.723504
+23:27:29  INFO  Not significant: [('FF', 'mean_pfx_x'), ('FF', 'mean_pfx_x_norm'), ('FF', 'mean_spin_axis'), ('SL', 'mean_pfx_x'), ('SL', 'mean_pfx_x_norm'), ('SI', 'mean_pfx_x_norm'), ('CU', 'mean_pfx_x'), ('CU', 'mean_spin_axis'), ('FC', 'mean_pfx_x'), ('FC', 'mean_pfx_x_norm'), ('FC', 'mean_spin_axis')]
+23:27:29  INFO  
+==================================================
+23:27:29  INFO  Summary: with_ext — 25/36 significant
+23:27:29  INFO  
+pitch_type         outcome  peak_age  decline_rate_at_mean  is_linear_model      pval_b1      pval_b2          aic
+        FF       mean_velo 19.902355             -0.200376            False 2.643943e-65 1.170237e-23 15473.953397
+        FF  mean_spin_rate 28.225759             -1.228475            False 9.891790e-02 3.792925e-23 53231.540427
+        FF      mean_pfx_z 28.761248             -0.000221            False 8.295335e-01 2.640827e-04 -5900.775552
+        SL       mean_velo 24.146396             -0.122004            False 1.690946e-11 6.239435e-09 10499.421499
+        SL  mean_spin_rate 29.193055              0.265470            False 8.514608e-01 3.919416e-09 32858.867244
+        SL      mean_pfx_z       NaN              0.010922            False 1.991812e-08 3.054191e-02  -544.625695
+        SL  mean_spin_axis       NaN              0.941642             True 4.551509e-02          NaN 24253.881077
+        SI       mean_velo 14.336654             -0.250139            False 6.775392e-52 7.253320e-08  8911.312929
+        SI  mean_spin_rate 27.860274             -0.983405            False 3.177127e-01 3.496197e-05 29379.012514
+        SI      mean_pfx_x       NaN              0.018000             True 1.053756e-02          NaN   -96.766116
+        SI      mean_pfx_z 33.386942              0.005391            False 2.071894e-02 1.659883e-03 -1192.827258
+        SI  mean_spin_axis       NaN             -0.667006             True 4.220740e-02          NaN 18846.402591
+        CH       mean_velo 24.260735             -0.151544            False 3.347213e-10 1.165389e-12  6977.659635
+        CH  mean_spin_rate 24.693493             -7.089748            False 5.340939e-04 5.287282e-06 22357.667917
+        CH      mean_pfx_x       NaN             -0.000074            False 9.928131e-01 1.550794e-03   448.397598
+        CH mean_pfx_x_norm       NaN              0.005788            False 1.681248e-03 5.522857e-03 -1384.905124
+        CH      mean_pfx_z       NaN             -0.001975            False 4.535262e-01 1.519602e-02  -478.426360
+        CH  mean_spin_axis 30.491802              0.181160            False 7.029854e-01 1.300511e-04 13491.304320
+        CU       mean_velo 20.001861             -0.204875            False 2.237431e-12 1.218924e-05  5341.919845
+        CU  mean_spin_rate 24.629534             -4.161209            False 6.833223e-02 2.133649e-02 16438.278717
+        CU mean_pfx_x_norm       NaN              0.009975             True 8.560495e-04          NaN  -186.251386
+        CU      mean_pfx_z       NaN              0.008871             True 1.453052e-02          NaN   173.893637
+        FC       mean_velo 17.848700             -0.138597            False 1.272954e-07 2.057237e-02  4319.155367
+        FC  mean_spin_rate 20.605083             -4.570574            False 1.205492e-02 1.136430e-01 13663.924565
+        FC      mean_pfx_z       NaN              0.009650             True 1.951758e-04          NaN  -431.758222
+23:27:29  INFO  Not significant: [('FF', 'mean_pfx_x'), ('FF', 'mean_pfx_x_norm'), ('FF', 'mean_spin_axis'), ('SL', 'mean_pfx_x'), ('SL', 'mean_pfx_x_norm'), ('SI', 'mean_pfx_x_norm'), ('CU', 'mean_pfx_x'), ('CU', 'mean_spin_axis'), ('FC', 'mean_pfx_x'), ('FC', 'mean_pfx_x_norm'), ('FC', 'mean_spin_axis')]
+23:27:29  INFO  
+AIC delta (with_ext minus base) — negative = ext improves:
+23:27:29  INFO  
+experiment                      delta  improves
+pitch_type outcome                             
+CH         mean_pfx_x       -2.572832      True
+           mean_pfx_z       -3.464913      True
+           mean_spin_rate   -3.530146      True
+CU         mean_pfx_x_norm  -3.203317      True
+           mean_spin_rate  -29.449422      True
+FC         mean_pfx_x_norm  -9.893383      True
+           mean_pfx_z       -2.034718      True
+           mean_spin_rate   -9.475346      True
+           mean_velo       -14.213847      True
+FF         mean_pfx_x_norm -51.308172      True
+           mean_spin_axis   -9.313737      True
+           mean_velo        -8.330114      True
+SI         mean_pfx_x_norm -20.301277      True
+           mean_pfx_z      -15.975904      True
+           mean_spin_axis   -6.654589      True
+           mean_velo        -8.003275      True
+SL         mean_pfx_z      -45.925991      True
+           mean_spin_rate  -56.277402      True
+           mean_velo       -35.326020      True
+23:27:29  INFO  Total runtime: 3.0 minutes
