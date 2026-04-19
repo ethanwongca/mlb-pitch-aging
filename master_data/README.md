@@ -1,4 +1,3 @@
-```markdown
 # pitching_master.csv — Data Dictionary
 
 Master dataset for the MLB Pitch Aging study. Each row represents one pitcher's
@@ -63,4 +62,3 @@ Spin axis data is unavailable prior to 2020. All values are NaN for 2015–2019.
 - **2021 spin rate:** MLB introduced sticky substance enforcement mid-2021. Population-wide spin rate drop visible in this season. Year is included as a fixed effect in all models to absorb this.
 - **pfx_x handedness:** Not normalized for handedness. RHP arm-side run is negative, LHP arm-side run is positive. Account for `p_throws` when analyzing horizontal movement across handedness.
 - **Source:** Statcast via pybaseball, birth years from Lahman Database (People.csv) bridged via Chadwick Bureau register.
-```
