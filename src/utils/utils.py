@@ -11,8 +11,8 @@ DEFAULT_OUTCOMES = [
     "mean_velo",
     "mean_spin_rate",
     "mean_pfx_x",
+    "mean_pfx_x_norm",
     "mean_pfx_z",
-    "mean_ext",
     "mean_spin_axis",
 ]
 
@@ -40,8 +40,12 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
 
 
 def load_data(data: Path = DATA_PATH) -> pd.DataFrame:
-    """Load the prepared master dataset."""
-    return pd.read_csv(data)
+    """Load the prepared master dataset and dropped effective speed
+    This is due to it's high colinearity with velo visible in notebooks/EDA.ipynb in our correlation charts
+    """
+    df = pd.read_csv(data)
+    df = df.drop(columns=["mean_eff_speed", "std_eff_speed"], errors="ignore")
+    return df 
 
 
 def get_data_pitch_type_dict(df: pd.DataFrame, pitch_types: list[str]) -> dict[str, pd.DataFrame]:
