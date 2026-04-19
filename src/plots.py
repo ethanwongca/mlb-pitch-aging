@@ -76,6 +76,7 @@ if __name__ == "__main__":
     sns.set_theme(style="whitegrid", palette="muted")
 
     df = pd.read_csv(DATA_DIR / "pitching_master.csv")
+    df = df.drop(columns=["age_c", "age_c_sq"], errors="ignore")
     df = df[df["pitch_type"].isin(VALID_PITCH_TYPES)]
 
     for metric, std_col, ylabel, title in METRICS:
