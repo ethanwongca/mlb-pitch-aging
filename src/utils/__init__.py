@@ -12,6 +12,12 @@ from .utils import get_n_groups
 from .utils import get_valid_pitch_types
 from .utils import load_data
 from .utils import setup_logger
+from .plots import plot_aging_curves_grid
+from .plots import plot_delta_method_comparison
+from .plots import plot_ext_aic_heatmap
+from .plots import plot_spin_velo_divergence
+from .plots import plot_spaghetti
+from .plots import plot_survivorship_bias
 
 __all__ = [
     "BASE_DIR",
@@ -26,4 +32,10 @@ __all__ = [
     "get_age_mean",
     "get_n_groups",
     "setup_logger",
+    "plot_aging_curves_grid",
+    "plot_delta_method_comparison",
+    "plot_spin_velo_divergence",
+    "plot_survivorship_bias",
+    "plot_ext_aic_heatmap",
+    "plot_spaghetti",
 ]

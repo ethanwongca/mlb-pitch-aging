@@ -19,6 +19,15 @@ from statsmodels.regression.mixed_linear_model import MixedLMResults
 from pathlib import Path
 import time
 
+from utils.plots import (
+    plot_aging_curves_grid,
+    plot_delta_method_comparison,
+    plot_ext_aic_heatmap,
+    plot_spaghetti,
+    plot_spin_velo_divergence,
+    plot_survivorship_bias,
+)
+
 from utils import (
     build_univariate_equation,
     build_univariate_equation_with_ext,
@@ -33,6 +42,7 @@ from utils import (
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MASTER_DATA_DIR = BASE_DIR / "master_data"
+PLOTS_DIR = BASE_DIR / "plots"
 OUTCOMES = get_default_outcomes()
 EXPERIMENTS = {
     "base": build_univariate_equation,
@@ -282,6 +292,48 @@ if __name__ == "__main__":
     compare_df["sig_with_ext"] = compare_df["significant_with_ext"].fillna(False).astype(bool)
     compare_df["sig_changed"] = compare_df["sig_base"] != compare_df["sig_with_ext"]
     compare_df["ext_improves"] = compare_df["aic_with_ext"] < compare_df["aic_base"]
+
+    # Generate plots from in-memory results.
+    try:
+        plot_aging_curves_grid(results_df, df, age_mean, PLOTS_DIR, experiment="base")
+        plot_aging_curves_grid(results_df, df, age_mean, PLOTS_DIR, experiment="with_ext")
+        plot_spin_velo_divergence(results_df, df, age_mean, PLOTS_DIR, experiment="base")
+        plot_spin_velo_divergence(results_df, df, age_mean, PLOTS_DIR, experiment="with_ext")
+        plot_survivorship_bias(
+            results_df,
+            df,
+            age_mean,
+            PLOTS_DIR,
+            pitch_type="FF",
+            outcome="mean_velo",
+            experiment="base",
+        )
+        plot_ext_aic_heatmap(results_df, PLOTS_DIR)
+        plot_delta_method_comparison(
+            results_df,
+            df,
+            age_mean,
+            out_dir=PLOTS_DIR,
+            experiment="base",
+        )
+        plot_delta_method_comparison(
+            results_df,
+            df,
+            age_mean,
+            out_dir=PLOTS_DIR,
+            experiment="with_ext",
+        )
+        plot_spaghetti(
+            results_df, df, age_mean,
+            out_dir=PLOTS_DIR,
+            experiment="with_ext",
+            min_seasons=5,
+            n_sample=40,
+            seed=42,
+        )
+        log.info(f"Saved plots to {PLOTS_DIR}")
+    except Exception as e:
+        log.error(f"Plot generation failed: {e}")
 
     elapsed = time.time() - start
     log.info(f"Total runtime: {elapsed / 60:.1f} minutes")
