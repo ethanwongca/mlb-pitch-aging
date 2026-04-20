@@ -1,0 +1,23 @@
+name: mlb-pitch-aging
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - tqdm
+  - pyarrow
+  - xarray
+  - arviz<1
+  - pymc
+  - bambi
+  - ipykernel
+  - pip
+  - pip:
+      - pybaseball
+      - PyGithub
+      - beautifulsoup4
