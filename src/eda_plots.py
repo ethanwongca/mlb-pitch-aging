@@ -24,10 +24,12 @@ METRICS = [
     ("mean_eff_speed", "std_eff_speed", "Eff. Speed (mph)", "Mean Eff. Speed"),
 ]
 
+
 def save_plot(title, suffix):
     filename = f"{title.lower().replace(' ', '_')}_{suffix}.png"
     plt.savefig(PLOTS_DIR / filename, dpi=150, bbox_inches="tight")
     print(f"Saved {filename}")
+
 
 def plot_by_age(df, metric, std_col, ylabel, title):
     _, axes = plt.subplots(2, 3, figsize=(16, 8))
@@ -40,7 +42,9 @@ def plot_by_age(df, metric, std_col, ylabel, title):
             .query("n >= 10")
         )
         ax.plot(agg["age"], agg["mean"], marker="o", linewidth=2)
-        ax.fill_between(agg["age"], agg["mean"] - agg["std"], agg["mean"] + agg["std"], alpha=0.2)
+        ax.fill_between(
+            agg["age"], agg["mean"] - agg["std"], agg["mean"] + agg["std"], alpha=0.2
+        )
         ax.set_title(pt)
         ax.set_xlabel("Age")
         ax.set_ylabel(ylabel)
@@ -50,17 +54,15 @@ def plot_by_age(df, metric, std_col, ylabel, title):
     save_plot(title, "by_age")
     plt.show()
 
+
 def plot_by_year(df, metric, ylabel, title):
     _, axes = plt.subplots(2, 3, figsize=(16, 8))
     for ax, pt in zip(axes.flatten(), VALID_PITCH_TYPES):
-        agg = (
-            df[df["pitch_type"] == pt]
-            .groupby("year")[metric]
-            .mean()
-            .reset_index()
-        )
+        agg = df[df["pitch_type"] == pt].groupby("year")[metric].mean().reset_index()
         ax.plot(agg["year"], agg[metric], marker="o", linewidth=2)
-        ax.axvline(x=2021, color="red", linestyle="--", alpha=0.7, label="2021 crackdown")
+        ax.axvline(
+            x=2021, color="red", linestyle="--", alpha=0.7, label="2021 crackdown"
+        )
         ax.set_title(pt)
         ax.set_xlabel("Year")
         ax.set_ylabel(ylabel)
@@ -70,6 +72,7 @@ def plot_by_year(df, metric, ylabel, title):
     plt.tight_layout()
     save_plot(title, "by_year")
     plt.show()
+
 
 if __name__ == "__main__":
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -85,5 +88,7 @@ if __name__ == "__main__":
 
     if "mean_spin_axis" in df.columns:
         spin_df = df[df["year"] >= 2020]
-        plot_by_age(spin_df, "mean_spin_axis", "std_spin_axis", "Spin Axis (deg)", "Spin Axis")
+        plot_by_age(
+            spin_df, "mean_spin_axis", "std_spin_axis", "Spin Axis (deg)", "Spin Axis"
+        )
         plot_by_year(spin_df, "mean_spin_axis", "Spin Axis (deg)", "Spin Axis")
