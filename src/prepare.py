@@ -10,6 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 MASTER_DATA_DIR = BASE_DIR / "master_data"
 
+
 def build_id_map() -> pd.DataFrame:
     """Bridge MLBAM IDs to birth years via Chadwick + Lahman People.csv"""
     print("Loading Chadwick register!")
@@ -22,13 +23,11 @@ def build_id_map() -> pd.DataFrame:
     print("Loading Lahman People.csv...")
     people = pd.read_csv(DATA_DIR / "People.csv")[["bbrefID", "birthYear"]]
 
-    id_map = (
-        chadwick
-        .merge(people, left_on="key_bbref", right_on="bbrefID", how="left")
-        [["key_mlbam", "birthYear"]]
-        .dropna()
-    )
+    id_map = chadwick.merge(
+        people, left_on="key_bbref", right_on="bbrefID", how="left"
+    )[["key_mlbam", "birthYear"]].dropna()
     return id_map
+
 
 def load_statcast() -> pd.DataFrame:
     """Concat all per-year parquets into one DataFrame"""
@@ -41,6 +40,7 @@ def load_statcast() -> pd.DataFrame:
             continue
         dfs.append(pd.read_parquet(path))
     return pd.concat(dfs, ignore_index=True)
+
 
 if __name__ == "__main__":
     pybaseball.cache.enable()
@@ -70,5 +70,8 @@ if __name__ == "__main__":
     df.to_csv(out_path, index=False)
     print(f"Saved {out_path.name} with {len(df)} rows")
     print(f"Age range: {df['age'].min()}–{df['age'].max()}")
-    print(df[["pitcher", "player_name", "year", "age", "pitch_type", "mean_velo"]].head(10))
-
+    print(
+        df[["pitcher", "player_name", "year", "age", "pitch_type", "mean_velo"]].head(
+            10
+        )
+    )
