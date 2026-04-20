@@ -72,7 +72,7 @@ def get_pitching_stats_year(year: int, parallel: bool = False) -> None:
     agg = pitching_df.groupby(groupby_cols).agg(**agg_dict).reset_index()
 
     # Removing uncommon position players pitching
-    agg = agg[agg["n_pitches"] > 150]
+    agg = agg[agg["n_pitches"] > 50]
     agg["year"] = year
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)

@@ -52,7 +52,6 @@ def plot_by_age(df, metric, std_col, ylabel, title):
     plt.suptitle(f"{title} by Age", fontsize=13)
     plt.tight_layout()
     save_plot(title, "by_age")
-    plt.show()
 
 
 def plot_by_year(df, metric, ylabel, title):
@@ -71,7 +70,6 @@ def plot_by_year(df, metric, ylabel, title):
     plt.suptitle(f"{title} by Year", fontsize=13)
     plt.tight_layout()
     save_plot(title, "by_year")
-    plt.show()
 
 
 if __name__ == "__main__":

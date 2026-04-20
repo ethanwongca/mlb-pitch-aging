@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pandas as pd
 
-# Path variables used across scripts.
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_PATH = BASE_DIR / "master_data" / "pitching_master.csv"
 
@@ -16,6 +15,30 @@ DEFAULT_OUTCOMES = [
     "mean_spin_axis",
 ]
 
+PITCH_COLORS = {
+    "FF": "#E63946",
+    "SL": "#457B9D",
+    "SI": "#F4A261",
+    "CH": "#2A9D8F",
+    "CU": "#9B5DE5",
+    "FC": "#F72585",
+}
+PITCH_LABELS = {
+    "FF": "4-Seam FB",
+    "SL": "Slider",
+    "SI": "Sinker",
+    "CH": "Changeup",
+    "CU": "Curveball",
+    "FC": "Cutter",
+}
+OUTCOME_LABELS = {
+    "mean_velo": "Velocity (mph)",
+    "mean_spin_rate": "Spin Rate (rpm)",
+    "mean_pfx_x_norm": "Horizontal Break, norm (ft)",
+    "mean_pfx_z": "Vertical Break (ft)",
+    "mean_spin_axis": "Spin Axis (°)",
+}
+
 
 def setup_logger(name: str, log_file: Path) -> logging.Logger:
     """Create a console+file logger with a consistent format."""
@@ -26,7 +49,9 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
     if logger.handlers:
         logger.handlers.clear()
 
-    formatter = logging.Formatter("%(asctime)s  %(levelname)s  %(message)s", datefmt="%H:%M:%S")
+    formatter = logging.Formatter(
+        "%(asctime)s  %(levelname)s  %(message)s", datefmt="%H:%M:%S"
+    )
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
@@ -40,45 +65,24 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
 
 
 def load_data(data: Path = DATA_PATH) -> pd.DataFrame:
-    """Load the prepared master dataset and dropped effective speed
-    This is due to it's high colinearity with velo visible in notebooks/EDA.ipynb in our correlation charts
-    """
-    df = pd.read_csv(data)
-    df = df.drop(columns=["mean_eff_speed", "std_eff_speed"], errors="ignore")
-    return df 
+    """Load the prepared master dataset and drop effective-speed columns."""
+    return pd.read_csv(data).drop(
+        columns=["mean_eff_speed", "std_eff_speed"], errors="ignore"
+    )
 
 
-def get_data_pitch_type_dict(df: pd.DataFrame, pitch_types: list[str]) -> dict[str, pd.DataFrame]:
+def get_data_pitch_type_dict(
+    df: pd.DataFrame, pitch_types: list[str]
+) -> dict[str, pd.DataFrame]:
     """Return one dataframe per pitch type."""
-    return {pitch_type: df[df["pitch_type"] == pitch_type] for pitch_type in pitch_types}
+    return {
+        pitch_type: df[df["pitch_type"] == pitch_type] for pitch_type in pitch_types
+    }
 
 
 def get_valid_pitch_types() -> list[str]:
     """Return pitch types that have enough data to be analyzed."""
     return ["FF", "SL", "SI", "CH", "CU", "FC"]
-
-
-def build_univariate_equation(outcome: str) -> str:
-    """Build the fixed-effects formula for univariate mixed models."""
-    return f"{outcome} ~ age_c + age_c_sq + C(year)"
-
-
-def build_univariate_equation_with_ext(outcome: str) -> str:
-    """Build the fixed-effects formula with extension as a covariate."""
-    return f"{outcome} ~ age_c + age_c_sq + C(year) + mean_ext"
-
-
-def get_n_groups(result) -> int:
-    """Return number of groups across statsmodels versions."""
-    if hasattr(result, "ngroups"):
-        return int(result.ngroups)
-
-    model = result.model
-    if hasattr(model, "group_labels"):
-        return int(len(model.group_labels))
-    if hasattr(model, "groups"):
-        return int(pd.Series(model.groups).nunique())
-    return 0
 
 
 def get_default_outcomes() -> list[str]:
@@ -89,3 +93,29 @@ def get_default_outcomes() -> list[str]:
 def get_age_mean(df: pd.DataFrame) -> float:
     """Calculate mean age for centering in mixed models."""
     return df["age"].mean()
+
+
+def ensure_mean_pfx_x_norm(df: pd.DataFrame) -> pd.DataFrame:
+    """Create normalized horizontal break if required columns are present."""
+    if "mean_pfx_x_norm" in df.columns:
+        return df
+    if {"mean_pfx_x", "p_throws"}.issubset(df.columns):
+        df = df.copy()
+        df["mean_pfx_x_norm"] = df["mean_pfx_x"].where(
+            df["p_throws"] != "L", -df["mean_pfx_x"]
+        )
+    return df
+
+
+def filter_pitchers_by_min_distinct_seasons(
+    data: pd.DataFrame,
+    min_seasons: int,
+    pitcher_col: str = "pitcher",
+    season_col: str = "year",
+) -> pd.DataFrame:
+    """Keep only pitchers with at least min_seasons distinct season values."""
+    if data.empty:
+        return data
+    season_counts = data.groupby(pitcher_col)[season_col].nunique(dropna=True)
+    keep_pitchers = season_counts[season_counts >= min_seasons].index
+    return data[data[pitcher_col].isin(keep_pitchers)].copy()

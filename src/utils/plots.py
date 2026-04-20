@@ -8,46 +8,33 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-PITCH_COLORS = {
-    "FF": "#E63946",
-    "SL": "#457B9D",
-    "SI": "#F4A261",
-    "CH": "#2A9D8F",
-    "CU": "#9B5DE5",
-    "FC": "#F72585",
-}
-OUTCOME_LABELS = {
-    "mean_velo":       "Velocity (mph)",
-    "mean_spin_rate":  "Spin Rate (rpm)",
-    "mean_pfx_x_norm": "Horizontal Break, norm (ft)",
-    "mean_pfx_z":      "Vertical Break (ft)",
-    "mean_spin_axis":  "Spin Axis (°)",
-}
-PITCH_LABELS = {
-    "FF": "4-Seam FB", "SL": "Slider", "SI": "Sinker",
-    "CH": "Changeup",  "CU": "Curveball", "FC": "Cutter",
-}
+from .utils import OUTCOME_LABELS, PITCH_COLORS, PITCH_LABELS
 
-plt.rcParams.update({
-    "figure.dpi":        150,
-    "axes.spines.top":   False,
-    "axes.spines.right": False,
-    "font.size":         10,
-})
+plt.rcParams.update(
+    {
+        "figure.dpi": 150,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "font.size": 10,
+    }
+)
 
-MIN_N_NAIVE = 15   # minimum pitchers per age for naive means
+MIN_N_NAIVE = 15  # minimum pitchers per age for naive means
 
 
 def _predict_curve(row: pd.Series, age_grid_c: np.ndarray) -> np.ndarray:
     """Reconstruct population-level predicted values from stored coefficients."""
-    y = row["intercept"] + row["b1"] * age_grid_c
-    if not row["is_linear_model"] and pd.notna(row.get("b2")):
-        y = y + row["b2"] * age_grid_c ** 2
+    b1 = row.get("b1_mean", row.get("b1", 0.0))
+    b2 = row.get("b2_mean", row.get("b2"))
+    intercept = row.get("intercept", 0.0)
+    y = intercept + b1 * age_grid_c
+    if not row.get("is_linear_model", False) and pd.notna(b2):
+        y = y + b2 * age_grid_c**2
     return y
 
 
 def _age_grid(age_mean: float, lo: int = 21, hi: int = 38, n: int = 200):
-    ages   = np.linspace(lo, hi, n)
+    ages = np.linspace(lo, hi, n)
     ages_c = ages - age_mean
     return ages, ages_c
 
@@ -72,7 +59,8 @@ def _naive_means(df: pd.DataFrame, outcome: str) -> pd.DataFrame:
 def _plot_naive(ax, naive: pd.DataFrame, color: str = "gray") -> None:
     """Uniform-size dots with standard error bars — paper-quality naive means."""
     ax.errorbar(
-        naive["age"], naive["mean"],
+        naive["age"],
+        naive["mean"],
         yerr=naive["sem"],
         fmt="o",
         markersize=4,
@@ -86,16 +74,20 @@ def _plot_naive(ax, naive: pd.DataFrame, color: str = "gray") -> None:
 
 
 def _plot_mixed_curve(
-    ax, ages: np.ndarray, y_shifted: np.ndarray,
-    color: str, row: pd.Series, age_mean: float,
+    ax,
+    ages: np.ndarray,
+    y_shifted: np.ndarray,
+    color: str,
+    row: pd.Series,
+    age_mean: float,
 ) -> None:
     """Mixed-effects curve with optional peak annotation."""
     ax.plot(ages, y_shifted, color=color, lw=2.5, zorder=3, label="Mixed-effects")
 
-    peak_age = row.get("peak_age")
+    peak_age = row.get("peak_age_mean", row.get("peak_age"))
     if pd.notna(peak_age) and 21 <= peak_age <= 38:
-        pa_c  = peak_age - age_mean
-        y_pk  = (
+        pa_c = peak_age - age_mean
+        y_pk = (
             _predict_curve(row, np.array([pa_c]))[0]
             - _predict_curve(row, ages - age_mean).mean()
             + y_shifted.mean()
@@ -104,8 +96,10 @@ def _plot_mixed_curve(
         ax.annotate(
             f"Peak {peak_age:.1f}",
             xy=(peak_age, y_pk),
-            xytext=(4, 6), textcoords="offset points",
-            fontsize=8, color=color,
+            xytext=(4, 6),
+            textcoords="offset points",
+            fontsize=8,
+            color=color,
         )
 
 
@@ -140,14 +134,15 @@ def plot_aging_curves_grid(
     ages, ages_c = _age_grid(age_mean)
 
     for outcome in outcomes:
-        pitch_rows  = sig_df[sig_df["outcome"] == outcome]
+        pitch_rows = sig_df[sig_df["outcome"] == outcome]
         pitch_types = pitch_rows["pitch_type"].tolist()
         if not pitch_types:
             continue
 
         n_pt = len(pitch_types)
         fig, axes = plt.subplots(
-            n_pt, 2,
+            n_pt,
+            2,
             figsize=(10, 2.8 * n_pt),
             gridspec_kw={"width_ratios": [3, 1]},
         )
@@ -157,16 +152,18 @@ def plot_aging_curves_grid(
         ylabel = OUTCOME_LABELS.get(outcome, outcome)
         fig.suptitle(
             f"Aging Curves — {ylabel}  [{experiment}]",
-            fontsize=13, fontweight="bold", y=1.01,
+            fontsize=13,
+            fontweight="bold",
+            y=1.01,
         )
 
         for ax_row, pt in zip(axes, pitch_types):
             ax_curve, ax_n = ax_row
-            row   = pitch_rows[pitch_rows["pitch_type"] == pt].iloc[0]
+            row = pitch_rows[pitch_rows["pitch_type"] == pt].iloc[0]
             color = PITCH_COLORS.get(pt, "steelblue")
 
             pt_raw = raw_df[raw_df["pitch_type"] == pt].dropna(subset=[outcome, "age"])
-            naive  = _naive_means(pt_raw, outcome)
+            naive = _naive_means(pt_raw, outcome)
 
             _plot_naive(ax_curve, naive)
 
@@ -176,15 +173,17 @@ def plot_aging_curves_grid(
             ax_curve.set_ylabel(ylabel, fontsize=9)
             ax_curve.set_xlabel("Age")
             ax_curve.set_title(
-                PITCH_LABELS.get(pt, pt), fontsize=10,
-                loc="left", fontweight="bold", color=color,
+                PITCH_LABELS.get(pt, pt),
+                fontsize=10,
+                loc="left",
+                fontweight="bold",
+                color=color,
             )
             ax_curve.legend(fontsize=8, frameon=False)
             ax_curve.xaxis.set_major_locator(mticker.MultipleLocator(2))
 
             n_by_age = pt_raw.groupby("age").size().reset_index(name="n")
-            ax_n.bar(n_by_age["age"], n_by_age["n"],
-                     color=color, alpha=0.6, width=0.8)
+            ax_n.bar(n_by_age["age"], n_by_age["n"], color=color, alpha=0.6, width=0.8)
             ax_n.set_xlabel("Age")
             ax_n.set_ylabel("N pitchers", fontsize=8)
             ax_n.yaxis.set_label_position("right")
@@ -219,24 +218,25 @@ def plot_spin_velo_divergence(
     ages, ages_c = _age_grid(age_mean)
     exp_df = results_df[results_df["experiment"] == experiment]
 
-    n   = len(pitch_types)
+    n = len(pitch_types)
     fig, axes = plt.subplots(1, n, figsize=(5 * n, 4.5), sharey=False)
     if n == 1:
         axes = [axes]
 
     fig.suptitle(
         "Velocity vs Spin Rate Aging — Mid-Career Spin Peak",
-        fontsize=12, fontweight="bold",
+        fontsize=12,
+        fontweight="bold",
     )
 
     for ax, pt in zip(axes, pitch_types):
-        color  = PITCH_COLORS.get(pt, "steelblue")
+        color = PITCH_COLORS.get(pt, "steelblue")
         pt_raw = raw_df[raw_df["pitch_type"] == pt]
-        ax2    = ax.twinx()
+        ax2 = ax.twinx()
 
         for outcome, target_ax, ls, ylabel, label in [
-            ("mean_velo",      ax,  "-",  "Velocity (mph)",   "Velocity"),
-            ("mean_spin_rate", ax2, "--", "Spin Rate (rpm)",  "Spin Rate"),
+            ("mean_velo", ax, "-", "Velocity (mph)", "Velocity"),
+            ("mean_spin_rate", ax2, "--", "Spin Rate (rpm)", "Spin Rate"),
         ]:
             row_match = exp_df[
                 (exp_df["pitch_type"] == pt) & (exp_df["outcome"] == outcome)
@@ -245,25 +245,25 @@ def plot_spin_velo_divergence(
                 continue
             row = row_match.iloc[0]
 
-            obs_mean  = pt_raw[outcome].dropna().mean()
+            obs_mean = pt_raw[outcome].dropna().mean()
             y_shifted = _shift_curve(row, ages_c, obs_mean)
             line_color = color if outcome == "mean_spin_rate" else "black"
 
-            target_ax.plot(ages, y_shifted, color=line_color,
-                           lw=2, ls=ls, label=label)
-            target_ax.set_ylabel(ylabel,
-                                  color=line_color, fontsize=8)
+            target_ax.plot(ages, y_shifted, color=line_color, lw=2, ls=ls, label=label)
+            target_ax.set_ylabel(ylabel, color=line_color, fontsize=8)
             target_ax.tick_params(axis="y", labelcolor=line_color)
 
             if outcome == "mean_spin_rate":
-                peak_age = row.get("peak_age")
+                peak_age = row.get("peak_age_mean", row.get("peak_age"))
                 if pd.notna(peak_age) and 21 <= peak_age <= 38:
                     ax2.axvline(peak_age, color=color, lw=1, ls=":", alpha=0.8)
                     ax2.annotate(
                         f"Spin peak\n{peak_age:.1f}",
                         xy=(peak_age, y_shifted.max()),
-                        xytext=(4, -20), textcoords="offset points",
-                        fontsize=7.5, color=color,
+                        xytext=(4, -20),
+                        textcoords="offset points",
+                        fontsize=7.5,
+                        color=color,
                     )
 
         ax.set_xlabel("Age")
@@ -272,8 +272,13 @@ def plot_spin_velo_divergence(
 
         lines1, labels1 = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        ax.legend(lines1 + lines2, labels1 + labels2,
-                  fontsize=8, frameon=False, loc="lower left")
+        ax.legend(
+            lines1 + lines2,
+            labels1 + labels2,
+            fontsize=8,
+            frameon=False,
+            loc="lower left",
+        )
 
     fig.tight_layout()
     fname = out_dir / f"spin_velo_divergence_{experiment}.png"
@@ -301,7 +306,7 @@ def plot_survivorship_bias(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    exp_df    = results_df[results_df["experiment"] == experiment]
+    exp_df = results_df[results_df["experiment"] == experiment]
     row_match = exp_df[
         (exp_df["pitch_type"] == pitch_type) & (exp_df["outcome"] == outcome)
     ]
@@ -309,18 +314,19 @@ def plot_survivorship_bias(
         print(f"  No results for {pitch_type} {outcome} [{experiment}] — skipping")
         return
 
-    row    = row_match.iloc[0]
-    color  = PITCH_COLORS.get(pitch_type, "steelblue")
+    row = row_match.iloc[0]
+    color = PITCH_COLORS.get(pitch_type, "steelblue")
     pt_raw = raw_df[raw_df["pitch_type"] == pitch_type].dropna(subset=[outcome, "age"])
-    naive  = _naive_means(pt_raw, outcome)
+    naive = _naive_means(pt_raw, outcome)
     ages, ages_c = _age_grid(age_mean)
-    y_shifted    = _shift_curve(row, ages_c, pt_raw[outcome].mean())
+    y_shifted = _shift_curve(row, ages_c, pt_raw[outcome].mean())
 
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(13, 4))
     fig.suptitle(
         f"Survivorship Bias — {PITCH_LABELS.get(pitch_type, pitch_type)} "
         f"{OUTCOME_LABELS.get(outcome, outcome)}",
-        fontsize=12, fontweight="bold",
+        fontsize=12,
+        fontweight="bold",
     )
 
     _plot_naive(ax1, naive, color=color)
@@ -332,7 +338,8 @@ def plot_survivorship_bias(
             "Flattening due to\nsurvivorship bias →",
             xy=(35, naive.query("age >= 34")["mean"].mean()),
             xytext=(30, naive["mean"].max()),
-            fontsize=8, color="gray",
+            fontsize=8,
+            color="gray",
             arrowprops=dict(arrowstyle="->", color="gray", lw=0.8),
         )
 
@@ -355,45 +362,64 @@ def plot_survivorship_bias(
     print(f"  Saved: {fname.name}")
 
 
-def plot_ext_aic_heatmap(
+def plot_ext_loo_heatmap(
     results_df: pd.DataFrame,
     out_dir: Path,
 ) -> None:
     """
-    Heatmap of AIC delta (with_ext − base) per pitch type × outcome.
-    Negative = extension improves fit.
+    Heatmap of PSIS-LOO delta (with_ext − base) per pitch type × outcome.
+    Positive = extension improves fit.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    base  = results_df[results_df["experiment"] == "base"].set_index(
-        ["pitch_type", "outcome"])["aic"]
-    ext   = results_df[results_df["experiment"] == "with_ext"].set_index(
-        ["pitch_type", "outcome"])["aic"]
+    metric = "loo"
+    metric_label = "ΔLOO"
+    base = results_df[results_df["experiment"] == "base"].set_index(
+        ["pitch_type", "outcome"]
+    )[metric]
+    ext = results_df[results_df["experiment"] == "with_ext"].set_index(
+        ["pitch_type", "outcome"]
+    )[metric]
     delta = (ext - base).unstack("outcome")
 
     pt_order = ["FF", "SL", "SI", "CH", "CU", "FC"]
-    oc_order = [o for o in [
-        "mean_velo", "mean_spin_rate", "mean_pfx_z",
-        "mean_pfx_x_norm", "mean_pfx_x", "mean_spin_axis",
-    ] if o in delta.columns]
+    oc_order = [
+        o
+        for o in [
+            "mean_velo",
+            "mean_spin_rate",
+            "mean_pfx_z",
+            "mean_pfx_x_norm",
+            "mean_pfx_x",
+            "mean_spin_axis",
+        ]
+        if o in delta.columns
+    ]
 
-    delta      = delta.reindex(index=pt_order, columns=oc_order)
+    delta = delta.reindex(index=pt_order, columns=oc_order)
     col_labels = [OUTCOME_LABELS.get(c, c) for c in delta.columns]
     row_labels = [PITCH_LABELS.get(r, r) for r in delta.index]
 
     fig, ax = plt.subplots(figsize=(10, 4.5))
     sns.heatmap(
-        delta, ax=ax,
-        annot=True, fmt=".1f",
-        cmap="RdYlGn_r", center=0,
-        linewidths=0.5, linecolor="white",
-        xticklabels=col_labels, yticklabels=row_labels,
-        cbar_kws={"label": "ΔAIC (with_ext − base)", "shrink": 0.8},
+        delta,
+        ax=ax,
+        annot=True,
+        fmt=".1f",
+        cmap="RdYlGn_r",
+        center=0,
+        linewidths=0.5,
+        linecolor="white",
+        xticklabels=col_labels,
+        yticklabels=row_labels,
+        cbar_kws={"label": f"{metric_label} (with_ext − base)", "shrink": 0.8},
     )
     ax.set_title(
-        "Extension Covariate — AIC Improvement over Base Model",
-        fontsize=12, fontweight="bold", pad=12,
+        f"Extension Covariate — {metric_label} Improvement over Base Model",
+        fontsize=12,
+        fontweight="bold",
+        pad=12,
     )
     ax.set_xlabel("")
     ax.set_ylabel("")
@@ -401,7 +427,183 @@ def plot_ext_aic_heatmap(
     ax.tick_params(axis="y", rotation=0)
 
     fig.tight_layout()
-    fname = out_dir / "ext_aic_heatmap.png"
+    fname = out_dir / "ext_loo_heatmap.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_peak_age_ci(
+    ci_df: pd.DataFrame,
+    out_dir: Path,
+    outcome: str = "mean_spin_rate",
+    experiment: str = "base",
+) -> None:
+    """Forest plot of peak ages with 95% confidence intervals."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    plot_df = ci_df.copy()
+    if "outcome" in plot_df.columns:
+        plot_df = plot_df[plot_df["outcome"] == outcome]
+
+    plot_df = plot_df.dropna(subset=["peak_age", "ci_lo", "ci_hi"]).copy()
+    if plot_df.empty:
+        print(f"  No CI rows for outcome={outcome}; skipping peak-age forest plot")
+        return
+
+    # Sort by estimated peak age so the ordering is visually interpretable.
+    plot_df = plot_df.sort_values("peak_age").reset_index(drop=True)
+    labels = [PITCH_LABELS.get(pt, pt) for pt in plot_df["pitch_type"]]
+    y = np.arange(len(plot_df))
+
+    x = plot_df["peak_age"].to_numpy(dtype=float)
+    xerr = np.vstack(
+        [
+            x - plot_df["ci_lo"].to_numpy(dtype=float),
+            plot_df["ci_hi"].to_numpy(dtype=float) - x,
+        ]
+    )
+
+    fig_h = max(3.5, 0.7 * len(plot_df) + 1.8)
+    fig, ax = plt.subplots(figsize=(8.5, fig_h))
+
+    ax.errorbar(
+        x,
+        y,
+        xerr=xerr,
+        fmt="o",
+        color="#1f2937",
+        ecolor="#6b7280",
+        elinewidth=2,
+        capsize=4,
+        markersize=6,
+        zorder=3,
+    )
+
+    # Add lightweight, per-pitch coloring accents for readability.
+    for i, row in plot_df.iterrows():
+        color = PITCH_COLORS.get(row["pitch_type"], "#1f77b4")
+        ax.plot(row["peak_age"], i, "o", color=color, markersize=7, zorder=4)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.set_xlabel("Estimated peak age (years)")
+    ax.set_ylabel("Pitch type")
+    outcome_label = OUTCOME_LABELS.get(outcome, outcome)
+    ax.set_title(
+        f"Peak age estimates with 95% CIs — {outcome_label}",
+        fontweight="bold",
+    )
+    ax.grid(axis="x", alpha=0.25, zorder=0)
+    ax.set_axisbelow(True)
+
+    x_lo = float(plot_df["ci_lo"].min())
+    x_hi = float(plot_df["ci_hi"].max())
+    pad = max(0.5, 0.08 * (x_hi - x_lo))
+    ax.set_xlim(x_lo - pad, x_hi + pad)
+
+    for i, row in plot_df.iterrows():
+        ax.text(
+            row["ci_hi"] + 0.05,
+            i,
+            f"{row['peak_age']:.1f} [{row['ci_lo']:.1f}, {row['ci_hi']:.1f}]",
+            va="center",
+            fontsize=8,
+            color="#374151",
+        )
+
+    fig.tight_layout()
+    fname = out_dir / f"peak_age_ci_{outcome}_{experiment}.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_decline_rate_ci(
+    decline_df: pd.DataFrame,
+    out_dir: Path,
+    outcome: str,
+    eval_age: float = 28,
+    experiment: str = "base",
+) -> None:
+    """Forest plot of decline rates at a given age with 95% confidence intervals."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    plot_df = decline_df[
+        (decline_df["outcome"] == outcome) & (decline_df["eval_age"] == eval_age)
+    ].copy()
+    plot_df = plot_df.dropna(subset=["rate", "ci_lo", "ci_hi"])
+    if plot_df.empty:
+        print(
+            f"  No decline-rate rows for outcome={outcome}, age={eval_age}; "
+            "skipping forest plot"
+        )
+        return
+
+    plot_df = plot_df.sort_values("rate").reset_index(drop=True)
+    labels = [PITCH_LABELS.get(pt, pt) for pt in plot_df["pitch_type"]]
+    y = np.arange(len(plot_df))
+
+    x = plot_df["rate"].to_numpy(dtype=float)
+    xerr = np.vstack(
+        [
+            x - plot_df["ci_lo"].to_numpy(dtype=float),
+            plot_df["ci_hi"].to_numpy(dtype=float) - x,
+        ]
+    )
+
+    fig_h = max(3.5, 0.7 * len(plot_df) + 1.8)
+    fig, ax = plt.subplots(figsize=(8.5, fig_h))
+
+    ax.errorbar(
+        x,
+        y,
+        xerr=xerr,
+        fmt="o",
+        color="#1f2937",
+        ecolor="#6b7280",
+        elinewidth=2,
+        capsize=4,
+        markersize=6,
+        zorder=3,
+    )
+
+    for i, row in plot_df.iterrows():
+        color = PITCH_COLORS.get(row["pitch_type"], "#1f77b4")
+        ax.plot(row["rate"], i, "o", color=color, markersize=7, zorder=4)
+
+    ax.axvline(0.0, color="#9ca3af", lw=1.2, ls="--", zorder=1)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.set_xlabel("Decline rate per year")
+    ax.set_ylabel("Pitch type")
+    outcome_label = OUTCOME_LABELS.get(outcome, outcome)
+    ax.set_title(
+        f"Decline rates at age {eval_age:.0f} with 95% CIs — {outcome_label}",
+        fontweight="bold",
+    )
+    ax.grid(axis="x", alpha=0.25, zorder=0)
+    ax.set_axisbelow(True)
+
+    x_lo = float(plot_df["ci_lo"].min())
+    x_hi = float(plot_df["ci_hi"].max())
+    pad = max(0.05, 0.08 * (x_hi - x_lo))
+    ax.set_xlim(x_lo - pad, x_hi + pad)
+
+    for i, row in plot_df.iterrows():
+        ax.text(
+            row["ci_hi"] + 0.01 * max(1.0, x_hi - x_lo),
+            i,
+            f"{row['rate']:.3f} [{row['ci_lo']:.3f}, {row['ci_hi']:.3f}]",
+            va="center",
+            fontsize=8,
+            color="#374151",
+        )
+
+    fig.tight_layout()
+    fname = out_dir / f"decline_rate_ci_{outcome}_{experiment}.png"
     fig.savefig(fname, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {fname.name}")
@@ -439,7 +641,8 @@ def plot_delta_method_comparison(
 
         n_pt = len(pitch_types)
         fig, axes = plt.subplots(
-            n_pt, 1,
+            n_pt,
+            1,
             figsize=(10, 3.2 * n_pt),
         )
         if n_pt == 1:
@@ -448,7 +651,9 @@ def plot_delta_method_comparison(
         ylabel = OUTCOME_LABELS.get(outcome, outcome)
         fig.suptitle(
             f"Delta Method vs Mixed-Effects — {ylabel}  [{experiment}]",
-            fontsize=13, fontweight="bold", y=1.01,
+            fontsize=13,
+            fontweight="bold",
+            y=1.01,
         )
 
         for ax, pt in zip(axes, pitch_types):
@@ -468,7 +673,8 @@ def plot_delta_method_comparison(
             )
 
             ax.errorbar(
-                delta["age"], delta["mean"],
+                delta["age"],
+                delta["mean"],
                 yerr=delta["sem"],
                 fmt="o--",
                 markersize=5,
@@ -483,12 +689,15 @@ def plot_delta_method_comparison(
 
             y_shifted = _shift_curve(row, ages_c, pt_raw[outcome].mean())
             ax.plot(
-                ages, y_shifted,
-                color=color, lw=2.5, zorder=3,
+                ages,
+                y_shifted,
+                color=color,
+                lw=2.5,
+                zorder=3,
                 label="Mixed-effects",
             )
 
-            peak_age = row.get("peak_age")
+            peak_age = row.get("peak_age_mean", row.get("peak_age"))
             if pd.notna(peak_age) and 21 <= peak_age <= 38:
                 pa_c = peak_age - age_mean
                 y_pk = float(
@@ -500,26 +709,34 @@ def plot_delta_method_comparison(
                 ax.annotate(
                     f"Peak {peak_age:.1f}",
                     xy=(peak_age, y_pk),
-                    xytext=(4, 6), textcoords="offset points",
-                    fontsize=8, color=color,
+                    xytext=(4, 6),
+                    textcoords="offset points",
+                    fontsize=8,
+                    color=color,
                 )
 
-            ax.axvspan(33, 38, alpha=0.05, color="red", label="High survivorship bias region")
+            ax.axvspan(
+                33, 38, alpha=0.05, color="red", label="High survivorship bias region"
+            )
 
-            decline = row.get("decline_rate_at_mean")
+            decline = row.get("decline_at_mean", row.get("decline_rate_at_mean"))
             if pd.notna(decline):
                 sign = "+" if decline > 0 else ""
                 ax.annotate(
                     f"Mixed-effects decline: {sign}{decline:.3f}/yr at age {age_mean:.0f}",
-                    xy=(0.02, 0.05), xycoords="axes fraction",
-                    fontsize=7.5, color=color,
+                    xy=(0.02, 0.05),
+                    xycoords="axes fraction",
+                    fontsize=7.5,
+                    color=color,
                     bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7),
                 )
 
             ax.set_title(
                 PITCH_LABELS.get(pt, pt),
-                fontsize=10, loc="left",
-                fontweight="bold", color=color,
+                fontsize=10,
+                loc="left",
+                fontweight="bold",
+                color=color,
             )
             ax.set_xlabel("Age")
             ax.set_ylabel(ylabel, fontsize=9)
@@ -533,64 +750,460 @@ def plot_delta_method_comparison(
         print(f"  Saved: {fname.name}")
 
 
-if __name__ == "__main__":
-    from utils import get_age_mean, load_data
+def plot_sdi_distributions(
+    sdi_df: pd.DataFrame,
+    out_dir: Path,
+    pitch_types: list[str] | None = None,
+    clip: float = 3.0,
+) -> None:
+    """
+    Violin + strip plot of SDI per pitch type.
+    Reference lines at balanced thresholds (0.8 and 1.2).
+    Clips to ±clip to suppress near-zero velo-slope outliers.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    BASE_DIR     = Path(__file__).resolve().parent.parent
-    MASTER_DIR   = BASE_DIR / "master_data"
-    PLOTS_DIR    = BASE_DIR / "plots"
+    if pitch_types is None:
+        pitch_types = [
+            pt
+            for pt in ["FF", "SL", "SI", "CH", "CU", "FC"]
+            if pt in sdi_df["pitch_type"].unique()
+        ]
 
-    print("Loading data...")
-    raw_df     = load_data()
-    results_df = pd.read_csv(MASTER_DIR / "model_results.csv")
-    age_mean   = get_age_mean(raw_df)
+    plot_df = (
+        sdi_df[sdi_df["pitch_type"].isin(pitch_types)]
+        .dropna(subset=["sdi"])
+        .query(f"sdi >= -{clip} and sdi <= {clip}")
+        .copy()
+    )
 
-    if "mean_pfx_x_norm" not in raw_df.columns:
-        raw_df["mean_pfx_x_norm"] = raw_df["mean_pfx_x"].where(
-            raw_df["p_throws"] != "L", -raw_df["mean_pfx_x"]
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+
+    positions = list(range(len(pitch_types)))
+    for i, pt in enumerate(pitch_types):
+        pt_data = plot_df[plot_df["pitch_type"] == pt]["sdi"].values
+        if len(pt_data) < 5:
+            continue
+        color = PITCH_COLORS.get(pt, "steelblue")
+
+        parts = ax.violinplot(
+            pt_data, positions=[i], widths=0.65, showmedians=False, showextrema=False
+        )
+        for pc in parts["bodies"]:
+            pc.set_facecolor(color)
+            pc.set_alpha(0.35)
+
+        rng = np.random.default_rng(42 + i)
+        jitter = rng.uniform(-0.08, 0.08, size=len(pt_data))
+        ax.scatter(
+            np.full(len(pt_data), i) + jitter,
+            pt_data,
+            color=color,
+            alpha=0.4,
+            s=8,
+            zorder=3,
         )
 
-    print("\nPlotting aging curves grid (base)...")
-    plot_aging_curves_grid(
-        results_df, raw_df, age_mean,
-        out_dir=PLOTS_DIR, experiment="base",
-    )
+        median = np.median(pt_data)
+        ax.plot([i - 0.18, i + 0.18], [median, median], color=color, lw=2.5, zorder=4)
 
-    print("\nPlotting aging curves grid (with_ext)...")
-    plot_aging_curves_grid(
-        results_df, raw_df, age_mean,
-        out_dir=PLOTS_DIR, experiment="with_ext",
-    )
-
-    print("\nPlotting spin vs velocity divergence...")
-    plot_spin_velo_divergence(
-        results_df, raw_df, age_mean,
-        out_dir=PLOTS_DIR,
-        pitch_types=["FF", "SL", "SI", "CH", "CU"],
-        experiment="with_ext",
-    )
-
-    print("\nPlotting survivorship bias panels...")
-    for pt, outcome in [("FF", "mean_velo"), ("FF", "mean_spin_rate"),
-                         ("SI", "mean_velo"), ("SL", "mean_spin_rate")]:
-        plot_survivorship_bias(
-            results_df, raw_df, age_mean,
-            out_dir=PLOTS_DIR,
-            pitch_type=pt, outcome=outcome,
-            experiment="base",
+    # Reference lines spanning the full plot width
+    n = len(pitch_types)
+    for y, ls, lw, label in [
+        (1.0, "-", 1.5, "Balanced (SDI = 1.0)"),
+        (1.2, "--", 1.0, "Spin-first threshold (1.2)"),
+        (0.8, "--", 1.0, "Velo-first threshold (0.8)"),
+    ]:
+        ax.hlines(
+            y,
+            xmin=-0.5,
+            xmax=n - 0.5,
+            colors="#374151" if ls == "-" else "#9ca3af",
+            linewidths=lw,
+            linestyles=ls,
+            alpha=0.6,
+            label=label,
+            zorder=1,
         )
 
-    print("\nPlotting extension AIC heatmap...")
-    plot_ext_aic_heatmap(results_df, out_dir=PLOTS_DIR)
+    ax.set_xlim(-0.5, n - 0.5)
+    ax.set_ylim(-clip - 0.2, clip + 0.2)
+    ax.set_xticks(positions)
+    ax.set_xticklabels([PITCH_LABELS.get(pt, pt) for pt in pitch_types])
+    ax.set_ylabel("Stuff Durability Index (SDI)")
+    ax.set_title(
+        "SDI Distribution by Pitch Type\n"
+        "SDI = (spin slope / pop SD) / (velo slope / pop SD)",
+        fontweight="bold",
+    )
+    ax.legend(fontsize=8, frameon=False, loc="upper right")
 
-    print("\nPlotting delta method comparison...")
-    plot_delta_method_comparison(
-        results_df, raw_df, age_mean,
-        out_dir=PLOTS_DIR,
-        experiment="base",
+    fig.tight_layout()
+    fname = out_dir / "sdi_distributions.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_scd_curves(
+    scd_df: pd.DataFrame,
+    outcome: str,
+    out_dir: Path,
+    pitch_types: list[str] | None = None,
+) -> None:
+    """
+    Line + shading plot of naive vs corrected decline rates across ages.
+    Shows bias growing with age — one panel per pitch type.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if pitch_types is None:
+        pitch_types = [
+            pt
+            for pt in ["FF", "SL", "SI", "CH", "CU"]
+            if pt in scd_df["pitch_type"].unique()
+        ]
+
+    fig, axes = plt.subplots(
+        1, len(pitch_types), figsize=(4 * len(pitch_types), 4), sharey=True
+    )
+    if len(pitch_types) == 1:
+        axes = [axes]
+
+    ylabel = OUTCOME_LABELS.get(outcome, outcome)
+    fig.suptitle(
+        f"Naive vs Selection-Corrected Decline Rate — {ylabel}",
+        fontsize=12,
+        fontweight="bold",
     )
 
-    print("\nDone — all plots saved to", PLOTS_DIR)
+    for ax, pt in zip(axes, pitch_types):
+        sub = scd_df[
+            (scd_df["pitch_type"] == pt) & (scd_df["outcome"] == outcome)
+        ].sort_values("eval_age")
+
+        if sub.empty:
+            ax.set_title(PITCH_LABELS.get(pt, pt), fontsize=10)
+            continue
+
+        color = PITCH_COLORS.get(pt, "steelblue")
+        ages = sub["eval_age"].values
+
+        # Prepend age 30 with identical naive/corrected = 0 to anchor the lines
+        # and make the growing divergence more visually dramatic
+        ages_ext = np.concatenate([[30], ages])
+        naive_ext = np.concatenate(
+            [[sub["naive_rate"].iloc[0]], sub["naive_rate"].values]
+        )
+        corrected_ext = np.concatenate(
+            [[sub["corrected_rate"].iloc[0]], sub["corrected_rate"].values]
+        )
+
+        ax.plot(
+            ages_ext,
+            naive_ext,
+            color="#6b7280",
+            lw=2,
+            ls="--",
+            marker="o",
+            markersize=5,
+            label="Naive",
+        )
+        ax.plot(
+            ages_ext,
+            corrected_ext,
+            color=color,
+            lw=2,
+            marker="o",
+            markersize=5,
+            label="Corrected",
+        )
+        ax.fill_between(
+            ages_ext,
+            naive_ext,
+            corrected_ext,
+            alpha=0.18,
+            color=color,
+            label="Survivorship bias",
+        )
+
+        ax.axhline(0, color="#374151", lw=0.8, ls="-", alpha=0.3)
+        ax.set_xlim(29.5, ages.max() + 0.5)
+        ax.set_title(
+            PITCH_LABELS.get(pt, pt), fontsize=10, fontweight="bold", color=color
+        )
+        ax.set_xlabel("Age")
+        ax.xaxis.set_major_locator(mticker.MultipleLocator(3))
+        ax.legend(fontsize=7, frameon=False)
+
+    axes[0].set_ylabel(f"{ylabel} / yr")
+    fig.tight_layout()
+    fname = out_dir / f"scd_curves_{outcome}.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_bivariate_correlation(
+    results: dict,
+    out_dir: Path,
+) -> None:
+    """
+    Posterior histogram of velo/spin random effect correlation for each pitch type.
+    One panel per pitch type with mean, HDI shading, and ρ=0 reference.
+    """
+    import arviz as az
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pitch_types = list(results.keys())
+    fig, axes = plt.subplots(1, len(pitch_types), figsize=(5.5 * len(pitch_types), 4))
+    if len(pitch_types) == 1:
+        axes = [axes]
+
+    fig.suptitle(
+        "Bivariate Velo/Spin Random Effect Correlation",
+        fontsize=12,
+        fontweight="bold",
+    )
+
+    for ax, pt in zip(axes, pitch_types):
+        idata = results[pt]
+        color = PITCH_COLORS.get(pt, "steelblue")
+        rho = idata.posterior["chol_corr"].values[:, :, 0, 1].flatten()
+        hdi = az.hdi(rho, hdi_prob=0.95)
+
+        ax.hist(rho, bins=60, color=color, alpha=0.65, density=True, zorder=2)
+        ax.axvspan(
+            hdi[0],
+            hdi[1],
+            alpha=0.18,
+            color=color,
+            zorder=1,
+            label=f"95% HDI [{hdi[0]:.3f}, {hdi[1]:.3f}]",
+        )
+        ax.axvline(
+            rho.mean(), color=color, lw=2, zorder=3, label=f"mean = {rho.mean():.3f}"
+        )
+        ax.axvline(
+            0,
+            color="#374151",
+            lw=1.2,
+            ls="--",
+            alpha=0.6,
+            zorder=3,
+            label="ρ = 0 (independence)",
+        )
+
+        ax.set_xlabel("Correlation (ρ)")
+        ax.set_ylabel("Density")
+        ax.set_title(
+            PITCH_LABELS.get(pt, pt), fontsize=10, fontweight="bold", color=color
+        )
+        ax.legend(fontsize=8, frameon=False)
+
+    fig.tight_layout()
+    fname = out_dir / "bivariate_correlation.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_bivariate_peak_comparison(
+    results: dict,
+    univariate_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    """
+    Side-by-side comparison of univariate vs bivariate peak age estimates.
+    Bivariate posteriors shown as HDI bars; univariate as point + CI from delta method.
+    """
+    import arviz as az
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pitch_types = list(results.keys())
+    outcomes = ["mean_velo", "mean_spin_rate"]
+    uni_base = univariate_df[univariate_df["experiment"] == "base"]
+
+    fig, axes = plt.subplots(
+        len(outcomes),
+        len(pitch_types),
+        figsize=(5 * len(pitch_types), 3.5 * len(outcomes)),
+        sharey=False,
+    )
+    if len(pitch_types) == 1:
+        axes = [[ax] for ax in axes]
+
+    for row_i, outcome in enumerate(outcomes):
+        var_name = "peak_age_velo" if outcome == "mean_velo" else "peak_age_spin"
+        ylabel = OUTCOME_LABELS.get(outcome, outcome)
+
+        for col_i, pt in enumerate(pitch_types):
+            ax = axes[row_i][col_i]
+            idata = results[pt]
+            color = PITCH_COLORS.get(pt, "steelblue")
+
+            # Bivariate posterior
+            samples = idata.posterior[var_name].values.flatten()
+            hdi = az.hdi(samples, hdi_prob=0.95)
+            biv_mean = samples.mean()
+
+            ax.hist(
+                samples,
+                bins=60,
+                color=color,
+                alpha=0.55,
+                density=True,
+                zorder=2,
+                label=f"Bivariate  {biv_mean:.1f} [{hdi[0]:.1f}, {hdi[1]:.1f}]",
+            )
+
+            # Univariate point estimate — support both old and new schema column names
+            uni_row = uni_base[
+                (uni_base["pitch_type"] == pt) & (uni_base["outcome"] == outcome)
+            ]
+            if not uni_row.empty:
+                uni_peak_val = uni_row.iloc[0].get(
+                    "peak_age_mean", uni_row.iloc[0].get("peak_age")
+                )
+                if pd.notna(uni_peak_val):
+                    ax.axvline(
+                        uni_peak_val,
+                        color="#374151",
+                        lw=2,
+                        ls="--",
+                        zorder=3,
+                        label=f"Univariate  {uni_peak_val:.1f}",
+                    )
+
+            ax.axvline(biv_mean, color=color, lw=1.8, zorder=3)
+            xlim = (25, 45) if outcome == "mean_spin_rate" else (20, 40)
+            ax.set_xlim(*xlim)
+            ax.set_xlabel("Peak age (years)")
+            ax.set_ylabel("Density" if col_i == 0 else "")
+            ax.set_title(
+                f"{PITCH_LABELS.get(pt, pt)} — {ylabel}",
+                fontsize=9,
+                fontweight="bold",
+                color=color,
+            )
+            ax.legend(fontsize=7.5, frameon=False)
+
+    fig.suptitle(
+        "Univariate vs Bivariate Peak Age Estimates",
+        fontsize=12,
+        fontweight="bold",
+        y=1.01,
+    )
+    fig.tight_layout()
+    fname = out_dir / "bivariate_peak_comparison.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_scd_bars(
+    scd_df: pd.DataFrame,
+    outcome: str,
+    out_dir: Path,
+    eval_ages: list[float] | None = None,
+    pitch_types: list[str] | None = None,
+) -> None:
+    """
+    Paired bar chart of naive vs corrected decline rates at key eval ages.
+    No inline annotations — visual difference speaks for itself.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if pitch_types is None:
+        pitch_types = [
+            pt
+            for pt in ["FF", "SL", "SI", "CH", "CU"]
+            if pt in scd_df["pitch_type"].unique()
+        ]
+    if eval_ages is None:
+        eval_ages = sorted(scd_df["eval_age"].unique().tolist())
+
+    n_ages = len(eval_ages)
+    fig, axes = plt.subplots(1, n_ages, figsize=(4 * n_ages, 4.5), sharey=True)
+    if n_ages == 1:
+        axes = [axes]
+
+    ylabel = OUTCOME_LABELS.get(outcome, outcome)
+    fig.suptitle(
+        f"Naive vs IPW-Corrected Decline Rates — {ylabel}",
+        fontsize=12,
+        fontweight="bold",
+    )
+
+    for ax, eval_age in zip(axes, eval_ages):
+        sub = scd_df[
+            (scd_df["outcome"] == outcome) & (scd_df["eval_age"] == eval_age)
+        ].set_index("pitch_type")
+        x = np.arange(len(pitch_types))
+        width = 0.35
+        labels = [PITCH_LABELS.get(pt, pt) for pt in pitch_types]
+
+        naive_vals = [
+            sub.loc[pt, "naive_rate"] if pt in sub.index else np.nan
+            for pt in pitch_types
+        ]
+        corrected_vals = [
+            sub.loc[pt, "corrected_rate"] if pt in sub.index else np.nan
+            for pt in pitch_types
+        ]
+
+        ax.bar(
+            x - width / 2, naive_vals, width, label="Naive", color="#9ca3af", alpha=0.85
+        )
+        ax.bar(
+            x + width / 2,
+            corrected_vals,
+            width,
+            label="Corrected",
+            color="#1d4ed8",
+            alpha=0.85,
+        )
+        ax.axhline(0, color="#374151", lw=0.8, ls="-", alpha=0.4)
+
+        # Flag SI reversal — corrected > naive means selection bias runs opposite direction
+        si_idx = pitch_types.index("SI") if "SI" in pitch_types else None
+        if si_idx is not None and "SI" in sub.index:
+            si_scd = sub.loc["SI", "scd"]
+            if pd.notna(si_scd) and si_scd < 0:
+                ax.annotate(
+                    "reversal",
+                    xy=(
+                        si_idx,
+                        min(naive_vals[si_idx] or 0, corrected_vals[si_idx] or 0),
+                    ),
+                    xytext=(0, -14),
+                    textcoords="offset points",
+                    fontsize=6.5,
+                    ha="center",
+                    color="#6b7280",
+                    style="italic",
+                )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=30, ha="right")
+        ax.set_title(f"Age {eval_age:.0f}", fontsize=10)
+        ax.set_xlabel("Pitch type")
+        if ax is axes[0]:
+            ax.set_ylabel("Decline rate per year")
+        ax.legend(fontsize=8, frameon=False)
+
+    fig.tight_layout()
+    fname = out_dir / f"scd_bars_{outcome}.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
 
 
 def plot_spaghetti(
@@ -632,14 +1245,15 @@ def plot_spaghetti(
     rng = np.random.default_rng(seed)
 
     for outcome in outcomes:
-        pitch_rows  = sig_df[sig_df["outcome"] == outcome]
+        pitch_rows = sig_df[sig_df["outcome"] == outcome]
         pitch_types = pitch_rows["pitch_type"].tolist()
         if not pitch_types:
             continue
 
         n_pt = len(pitch_types)
         fig, axes = plt.subplots(
-            n_pt, 1,
+            n_pt,
+            1,
             figsize=(10, 3.5 * n_pt),
             sharex=False,
         )
@@ -650,22 +1264,25 @@ def plot_spaghetti(
         fig.suptitle(
             f"Spaghetti Plot — {ylabel}  [{experiment}]  "
             f"(≥{min_seasons} seasons, n={n_sample} sampled)",
-            fontsize=12, fontweight="bold", y=1.01,
+            fontsize=12,
+            fontweight="bold",
+            y=1.01,
         )
 
         for ax, pt in zip(axes, pitch_types):
-            row   = pitch_rows[pitch_rows["pitch_type"] == pt].iloc[0]
+            row = pitch_rows[pitch_rows["pitch_type"] == pt].iloc[0]
             color = PITCH_COLORS.get(pt, "steelblue")
 
-            pt_raw = (
-                raw_df[raw_df["pitch_type"] == pt]
-                .dropna(subset=[outcome, "age", "age_c"])
+            pt_raw = raw_df[raw_df["pitch_type"] == pt].dropna(
+                subset=[outcome, "age", "age_c"]
             )
             season_counts = pt_raw.groupby("pitcher")["age"].count()
-            eligible      = season_counts[season_counts >= min_seasons].index.tolist()
+            eligible = season_counts[season_counts >= min_seasons].index.tolist()
 
             if not eligible:
-                ax.set_title(f"{PITCH_LABELS.get(pt, pt)} — insufficient data", color=color)
+                ax.set_title(
+                    f"{PITCH_LABELS.get(pt, pt)} — insufficient data", color=color
+                )
                 continue
 
             sampled = rng.choice(
@@ -676,15 +1293,16 @@ def plot_spaghetti(
 
             pitcher_means = (
                 pt_raw[pt_raw["pitcher"].isin(sampled)]
-                .groupby("pitcher")[outcome].mean()
+                .groupby("pitcher")[outcome]
+                .mean()
                 .sort_values()
             )
             n_cs = min(3, len(pitcher_means))
-            idx  = [0, len(pitcher_means) // 2, len(pitcher_means) - 1][:n_cs]
+            idx = [0, len(pitcher_means) // 2, len(pitcher_means) - 1][:n_cs]
             case_study_ids = set(pitcher_means.iloc[idx].index.tolist())
 
-            obs_mean  = pt_raw[outcome].mean()
-            y_pop     = _shift_curve(row, ages_c, obs_mean)
+            obs_mean = pt_raw[outcome].mean()
+            y_pop = _shift_curve(row, ages_c, obs_mean)
 
             for pid in sampled:
                 p_data = pt_raw[pt_raw["pitcher"] == pid].sort_values("age")
@@ -697,7 +1315,8 @@ def plot_spaghetti(
                 unique_ages = np.unique(age_vals)
 
                 ax.scatter(
-                    age_vals, y_vals,
+                    age_vals,
+                    y_vals,
                     color=color,
                     alpha=0.5 if is_case else 0.08,
                     s=12 if is_case else 8,
@@ -709,7 +1328,8 @@ def plot_spaghetti(
                 age_dense = np.linspace(age_vals.min(), age_vals.max(), 80)
                 y_dense = np.polyval(coeffs, age_dense)
                 ax.plot(
-                    age_dense, y_dense,
+                    age_dense,
+                    y_dense,
                     color=color,
                     alpha=0.65 if is_case else 0.12,
                     lw=1.8 if is_case else 0.9,
@@ -717,12 +1337,13 @@ def plot_spaghetti(
                 )
 
                 pitcher_mean = p_data[outcome].mean()
-                y_pitcher    = _shift_curve(row, ages_c, pitcher_mean)
+                y_pitcher = _shift_curve(row, ages_c, pitcher_mean)
                 age_lo = p_data["age"].min()
                 age_hi = p_data["age"].max()
                 mask = (ages >= age_lo) & (ages <= age_hi)
                 ax.plot(
-                    ages[mask], y_pitcher[mask],
+                    ages[mask],
+                    y_pitcher[mask],
                     color=color,
                     alpha=0.5 if is_case else 0.05,
                     lw=1.5 if is_case else 0.6,
@@ -731,40 +1352,58 @@ def plot_spaghetti(
                 )
 
                 if is_case:
-                    name = p_data["player_name"].iloc[0] if "player_name" in p_data else str(pid)
+                    name = (
+                        p_data["player_name"].iloc[0]
+                        if "player_name" in p_data
+                        else str(pid)
+                    )
                     last_age = p_data["age"].iloc[-1]
                     last_val = p_data[outcome].iloc[-1]
                     ax.annotate(
                         name.split(",")[0] if "," in name else name,
                         xy=(last_age, last_val),
-                        xytext=(4, 0), textcoords="offset points",
-                        fontsize=7, color=color, alpha=0.85,
+                        xytext=(4, 0),
+                        textcoords="offset points",
+                        fontsize=7,
+                        color=color,
+                        alpha=0.85,
                         va="center",
                     )
 
             ax.plot(
-                ages, y_pop,
-                color="black", lw=3, zorder=5,
+                ages,
+                y_pop,
+                color="black",
+                lw=3,
+                zorder=5,
                 label="Population curve (mixed-effects)",
             )
 
-            peak_age = row.get("peak_age")
+            peak_age = row.get("peak_age_mean", row.get("peak_age"))
             if pd.notna(peak_age) and 21 <= peak_age <= 38:
-                pa_c  = peak_age - age_mean
-                y_pk  = float(_predict_curve(row, np.array([pa_c]))[0]
-                              - _predict_curve(row, ages_c).mean() + obs_mean)
+                pa_c = peak_age - age_mean
+                y_pk = float(
+                    _predict_curve(row, np.array([pa_c]))[0]
+                    - _predict_curve(row, ages_c).mean()
+                    + obs_mean
+                )
                 ax.axvline(peak_age, color="black", lw=1, ls=":", alpha=0.5)
                 ax.annotate(
                     f"Peak {peak_age:.1f}",
                     xy=(peak_age, y_pk),
-                    xytext=(5, 8), textcoords="offset points",
-                    fontsize=8.5, color="black",
+                    xytext=(5, 8),
+                    textcoords="offset points",
+                    fontsize=8.5,
+                    color="black",
                 )
 
             ax.set_title(
                 f"{PITCH_LABELS.get(pt, pt)}  "
                 f"(n={len(sampled)} pitchers, {len(eligible)} eligible)",
-                fontsize=10, loc="left", fontweight="bold", color=color,
+                fontsize=10,
+                loc="left",
+                fontweight="bold",
+                color=color,
             )
             ax.set_xlabel("Age")
             ax.set_ylabel(ylabel, fontsize=9)
@@ -772,12 +1411,26 @@ def plot_spaghetti(
             ax.legend(fontsize=8, frameon=False, loc="upper right")
 
             from matplotlib.lines import Line2D
+
             handles, labels = ax.get_legend_handles_labels()
             handles += [
-                Line2D([0], [0], color=color, alpha=0.4, lw=0.8,
-                      label=f"Individual aging curves (sampled, n={len(sampled)})"),
-                Line2D([0], [0], color=color, alpha=0.4, lw=1.2, ls="--",
-                       label="Per-pitcher model fit"),
+                Line2D(
+                    [0],
+                    [0],
+                    color=color,
+                    alpha=0.4,
+                    lw=0.8,
+                    label=f"Individual aging curves (sampled, n={len(sampled)})",
+                ),
+                Line2D(
+                    [0],
+                    [0],
+                    color=color,
+                    alpha=0.4,
+                    lw=1.2,
+                    ls="--",
+                    label="Per-pitcher model fit",
+                ),
             ]
             ax.legend(handles=handles, fontsize=7.5, frameon=False, loc="upper right")
 
