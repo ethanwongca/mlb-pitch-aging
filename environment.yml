@@ -21,3 +21,7 @@ dependencies:
       - pybaseball
       - PyGithub
       - beautifulsoup4
+      # GPU sampling: jax[cuda12_pip] bundles its own CUDA runtime — no nvcc needed,
+      # only the NVIDIA driver (nvidia-smi). Use cuda11_pip if driver reports CUDA < 12.
+      - "jax[cuda12_pip]"
+      - numpyro
