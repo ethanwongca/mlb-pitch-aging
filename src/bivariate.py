@@ -45,47 +45,66 @@ def prepare_bivariate_data(
     pitcher_idx = {pid: i for i, pid in enumerate(pitchers)}
     pt_df["pitcher_idx"] = pt_df["pitcher"].map(pitcher_idx)
 
+    years = pt_df["year"].unique()
+    year_idx = {y: i for i, y in enumerate(years)}
+    pt_df["year_idx"] = pt_df["year"].map(year_idx)
+
     return {
         "df": pt_df,
         "pitchers": pitchers,
         "pitcher_idx": pt_df["pitcher_idx"].values,
+        "years": years,
+        "year_idx": pt_df["year_idx"].values,
         "age_c": pt_df["age_c"].values,
         "age_c_sq": pt_df["age_c_sq"].values,
         "velo": pt_df[outcome_velo].values,
         "spin": pt_df[outcome_spin].values,
         "n_pitchers": len(pitchers),
+        "n_years": len(years),
         "n_obs": len(pt_df),
     }
 
 
 def build_bivariate_model(data: dict, age_mean: float) -> pm.Model:
+    velo_sd = float(data["velo"].std())
+    spin_sd = float(data["spin"].std())
+
     with pm.Model() as model:
-        b0_velo = pm.Normal("b0_velo", mu=data["velo"].mean(), sigma=5)
-        b1_velo = pm.Normal("b1_velo", mu=0, sigma=1)
-        b2_velo = pm.Normal("b2_velo", mu=0, sigma=0.5)
+        b0_velo = pm.Normal("b0_velo", mu=data["velo"].mean(), sigma=2 * velo_sd)
+        b1_velo = pm.Normal("b1_velo", mu=0, sigma=velo_sd / 4)
+        b2_velo = pm.Normal("b2_velo", mu=0, sigma=velo_sd / 2)
 
-        b0_spin = pm.Normal("b0_spin", mu=data["spin"].mean(), sigma=100)
-        b1_spin = pm.Normal("b1_spin", mu=0, sigma=50)
-        b2_spin = pm.Normal("b2_spin", mu=0, sigma=20)
+        b0_spin = pm.Normal("b0_spin", mu=data["spin"].mean(), sigma=2 * spin_sd)
+        b1_spin = pm.Normal("b1_spin", mu=0, sigma=spin_sd / 4)
+        b2_spin = pm.Normal("b2_spin", mu=0, sigma=spin_sd / 2)
 
-        sd_dist = pm.HalfNormal.dist(sigma=np.array([2.0, 100.0]))
+        # Pitcher random effect (correlated across velo and spin)
+        sd_dist = pm.HalfNormal.dist(sigma=np.array([velo_sd, spin_sd]))
         chol, _, _ = pm.LKJCholeskyCov(
             "chol", n=2, eta=2, sd_dist=sd_dist, compute_corr=True
         )
-
         # Non-centered parameterization: avoids funnel geometry in large hierarchies
         z = pm.Normal("z", mu=0, sigma=1, shape=(data["n_pitchers"], 2))
         u = pm.Deterministic("u", pm.math.dot(z, chol.T))
 
+        # Year random effect (partial pooling over seasons)
+        sd_year = pm.HalfNormal.dist(sigma=np.array([velo_sd, spin_sd]))
+        chol_year, _, _ = pm.LKJCholeskyCov(
+            "chol_year", n=2, eta=2, sd_dist=sd_year, compute_corr=False
+        )
+        z_year = pm.Normal("z_year", mu=0, sigma=1, shape=(data["n_years"], 2))
+        u_year = pm.Deterministic("u_year", pm.math.dot(z_year, chol_year.T))
+
         age_c = data["age_c"]
         age_c_sq = data["age_c_sq"]
         pidx = data["pitcher_idx"]
+        yidx = data["year_idx"]
 
-        mu_velo = b0_velo + u[pidx, 0] + b1_velo * age_c + b2_velo * age_c_sq
-        mu_spin = b0_spin + u[pidx, 1] + b1_spin * age_c + b2_spin * age_c_sq
+        mu_velo = b0_velo + u[pidx, 0] + u_year[yidx, 0] + b1_velo * age_c + b2_velo * age_c_sq
+        mu_spin = b0_spin + u[pidx, 1] + u_year[yidx, 1] + b1_spin * age_c + b2_spin * age_c_sq
 
-        sigma_velo = pm.HalfNormal("sigma_velo", sigma=2)
-        sigma_spin = pm.HalfNormal("sigma_spin", sigma=50)
+        sigma_velo = pm.HalfNormal("sigma_velo", sigma=velo_sd)
+        sigma_spin = pm.HalfNormal("sigma_spin", sigma=spin_sd)
 
         pm.Normal("velo_obs", mu=mu_velo, sigma=sigma_velo, observed=data["velo"])
         pm.Normal("spin_obs", mu=mu_spin, sigma=sigma_spin, observed=data["spin"])

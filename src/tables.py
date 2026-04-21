@@ -68,7 +68,7 @@ def build_table_s1(
         base = base.rename(columns={"peak_age_median": "peak_age"})
 
     # Normalize significance columns
-    sig_cols = ["pval_b1", "pval_b2", "b1_significant", "b2_significant"]
+    sig_cols = ["b1_significant", "b2_significant"]
     keep_sig = [c for c in sig_cols if c in base.columns]
 
     base_cols = (

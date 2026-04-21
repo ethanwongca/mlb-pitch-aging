@@ -62,10 +62,6 @@ def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.D
 
         # Filter to physically plausible peak ages — mirrors the bounds used in
         # inference.py's peak_age_from_posterior to keep comparisons consistent.
-        velo_median = float(np.median(peak_velo))
-        spin_median = float(np.median(peak_spin))
-        scg_median = float(np.median(peak_spin - peak_velo))
-        
         valid = (
             (peak_velo > 15) & (peak_velo < 50)
             & (peak_spin > 15) & (peak_spin < 50)
@@ -76,7 +72,11 @@ def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.D
         if len(peak_velo) < 100:
             continue
 
+        velo_median = float(np.median(peak_velo))
+        spin_median = float(np.median(peak_spin))
+        
         scg_samples = peak_spin - peak_velo
+        scg_median = float(np.median(scg_samples))
         hdi = az.hdi(scg_samples, hdi_prob=0.95)
 
         rows.append({

@@ -51,7 +51,6 @@ def peak_age_from_posterior(
         }
 
     peak_samples_raw = age_mean + (-b1[mask] / (2 * b2[mask]))
-    peak_median = float(np.median(peak_samples_raw))
     
     peak_samples = peak_samples_raw[(peak_samples_raw > 15) & (peak_samples_raw < 50)]
 
@@ -62,6 +61,8 @@ def peak_age_from_posterior(
             "hdi_hi": None,
             "pct_b2_negative": pct_neg,
         }
+
+    peak_median = float(np.median(peak_samples))
 
     hdi = az.hdi(peak_samples, hdi_prob=hdi_prob)
 
