@@ -18,8 +18,8 @@ VALID_PITCH_TYPES = ["FF", "SL", "SI", "CH", "CU", "FC"]
 METRICS = [
     ("mean_velo", "std_velo", "Velocity (mph)", "Mean Velocity"),
     ("mean_spin_rate", "std_spin_rate", "Spin Rate (rpm)", "Mean Spin Rate"),
-    ("mean_pfx_x", "std_pfx_x", "Horizontal Break (in)", "Mean H-Break"),
-    ("mean_pfx_z", "std_pfx_z", "Vertical Break (in)", "Mean V-Break"),
+    ("mean_pfx_x", "std_pfx_x", "Horizontal Break (ft)", "Mean H-Break"),
+    ("mean_pfx_z", "std_pfx_z", "Vertical Break (ft)", "Mean V-Break"),
     ("mean_ext", "std_ext", "Extension (ft)", "Mean Extension"),
     ("mean_eff_speed", "std_eff_speed", "Eff. Speed (mph)", "Mean Eff. Speed"),
 ]

@@ -19,10 +19,10 @@ def compute_scg(results_df: pd.DataFrame, experiment: str = "base") -> pd.DataFr
 
     velo = (
         exp_df[exp_df["outcome"] == "mean_velo"][
-            ["pitch_type", "peak_age_mean", "peak_age_hdi_lo", "peak_age_hdi_hi"]
+            ["pitch_type", "peak_age_median", "peak_age_hdi_lo", "peak_age_hdi_hi"]
         ]
         .rename(columns={
-            "peak_age_mean": "velo_peak_age",
+            "peak_age_median": "velo_peak_age",
             "peak_age_hdi_lo": "velo_hdi_lo",
             "peak_age_hdi_hi": "velo_hdi_hi",
         })
@@ -30,10 +30,10 @@ def compute_scg(results_df: pd.DataFrame, experiment: str = "base") -> pd.DataFr
 
     spin = (
         exp_df[exp_df["outcome"] == "mean_spin_rate"][
-            ["pitch_type", "peak_age_mean", "peak_age_hdi_lo", "peak_age_hdi_hi"]
+            ["pitch_type", "peak_age_median", "peak_age_hdi_lo", "peak_age_hdi_hi"]
         ]
         .rename(columns={
-            "peak_age_mean": "spin_peak_age",
+            "peak_age_median": "spin_peak_age",
             "peak_age_hdi_lo": "spin_hdi_lo",
             "peak_age_hdi_hi": "spin_hdi_hi",
         })
@@ -62,6 +62,10 @@ def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.D
 
         # Filter to physically plausible peak ages — mirrors the bounds used in
         # inference.py's peak_age_from_posterior to keep comparisons consistent.
+        velo_median = float(np.median(peak_velo))
+        spin_median = float(np.median(peak_spin))
+        scg_median = float(np.median(peak_spin - peak_velo))
+        
         valid = (
             (peak_velo > 15) & (peak_velo < 50)
             & (peak_spin > 15) & (peak_spin < 50)
@@ -77,9 +81,9 @@ def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.D
 
         rows.append({
             "pitch_type": pt,
-            "velo_peak_age": float(peak_velo.mean()),
-            "spin_peak_age": float(peak_spin.mean()),
-            "scg": float(scg_samples.mean()),
+            "velo_peak_age": velo_median,
+            "spin_peak_age": spin_median,
+            "scg": scg_median,
             "scg_hdi_lo": float(hdi[0]),
             "scg_hdi_hi": float(hdi[1]),
         })

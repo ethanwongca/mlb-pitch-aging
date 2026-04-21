@@ -64,8 +64,8 @@ def build_table_s1(
     )
 
     # Normalize peak_age column (Bayesian uses peak_age_mean, delta method uses peak_age)
-    if "peak_age_mean" in base.columns and "peak_age" not in base.columns:
-        base = base.rename(columns={"peak_age_mean": "peak_age"})
+    if "peak_age_median" in base.columns and "peak_age" not in base.columns:
+        base = base.rename(columns={"peak_age_median": "peak_age"})
 
     # Normalize significance columns
     sig_cols = ["pval_b1", "pval_b2", "b1_significant", "b2_significant"]
@@ -90,7 +90,7 @@ def build_table_s1(
 
 def build_table_s2(peak_base: pd.DataFrame, peak_ext: pd.DataFrame) -> pd.DataFrame:
     """Full peak age CI table — base and with_ext side by side."""
-    peak_col = "peak_age_mean" if "peak_age_mean" in peak_base.columns else "peak_age"
+    peak_col = "peak_age_median" if "peak_age_median" in peak_base.columns else "peak_age"
 
     b = peak_base[["pitch_type", "outcome", peak_col, "ci_lo", "ci_hi"]].rename(
         columns={
@@ -149,7 +149,7 @@ def build_table1(decline_base: pd.DataFrame) -> pd.DataFrame:
 
 def build_table2(peak_base: pd.DataFrame) -> pd.DataFrame:
     """Table 2: Spin rate peak ages with 95% CIs — FF SL SI CH CU (FC excluded)."""
-    peak_col = "peak_age_mean" if "peak_age_mean" in peak_base.columns else "peak_age"
+    peak_col = "peak_age_median" if "peak_age_median" in peak_base.columns else "peak_age"
     t = (
         peak_base[
             (peak_base["outcome"] == "mean_spin_rate")

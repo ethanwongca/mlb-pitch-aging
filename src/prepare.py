@@ -25,7 +25,7 @@ def build_id_map() -> pd.DataFrame:
 
     id_map = chadwick.merge(
         people, left_on="key_bbref", right_on="bbrefID", how="left"
-    )[["key_mlbam", "birthYear"]].dropna()
+    )[["key_mlbam", "birthYear"]].dropna().drop_duplicates(subset=["key_mlbam"])
     return id_map
 
 
@@ -64,6 +64,12 @@ if __name__ == "__main__":
     df["age_c"] = df["age"] - age_mean
     df["age_c_sq"] = df["age_c"] ** 2
     df = df.drop(columns=["key_mlbam", "birthYear"])
+
+    # Defensive deduplication to prevent model inflation
+    pre_dedup = len(df)
+    df = df.drop_duplicates(subset=["pitcher", "year", "pitch_type", "p_throws"])
+    if len(df) < pre_dedup:
+        print(f"Dropped {pre_dedup - len(df)} duplicated pipeline rows!")
 
     # Save master
     MASTER_DATA_DIR.mkdir(parents=True, exist_ok=True)

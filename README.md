@@ -8,13 +8,13 @@ By: Ethan Wong
 
 ## Overview
 
-This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate, and movement) using Statcast pitch-level data from 2015 to 2025. We introduce Bayesian multilevel modeling to this domain, providing the first Statcast-era aging curves with full posterior uncertainty on peak age estimates.
+This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate, and movement) using Statcast pitch-level data from 2015 to 2025. We use Bayesian multilevel modeling to provide among the first publicly documented Statcast-era aging curves with full posterior uncertainty on peak age estimates.
 
 **Key findings:**
-- Velocity declines monotonically throughout observable MLB careers (−0.13 to −0.26 mph/yr depending on pitch type)
-- Spin rate peaks mid-career (ages 25–32), *after* velocity has already begun declining showing evidence of an active compensation mechanism
-- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age which ranges from −0.5 years (changeup) to +8.3 years (sinker, bivariate estimate)
-- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), indicating harder throwers naturally spin more
+- Velocity peaks early and declines thereafter (−0.13 to −0.26 mph/yr depending on pitch type)
+- Spin peaks later than velocity (ages 25–32), hypothesizing a potential compensatory mechanism as pitchers age
+- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.5 to +8.3 years). Extremely large gaps highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
+- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), aligning with known biomechanics that harder throwers naturally spin the ball more
 - Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries so used mixed-effects models to correct for this
 
 ---
@@ -130,6 +130,10 @@ Priors (weakly informative, scaled to each outcome's SD):
 ν          ~ Gamma(2, 0.1)
 ```
 
+### Peak Age Estimation (Cauchy-Ratio Correction)
+
+Peak ages are derived directly from the MCMC posterior samples via the quadratic vertex `(-β₁ / 2β₂)`. Because the ratio of two normally distributed parameters fundamentally resembles a heavy-tailed Cauchy distribution, taking an arithmetic mean is mathematically unstable. To guarantee statistically sound point estimates, we explicitly evaluate the **posterior median** over the entirely unbounded posterior distribution. This correctly grounds the final estimate and averts artificial truncation bias.
+
 ### Bivariate — PyMC
 
 Joint model for velocity and spin rate (FF and SI only):
@@ -167,6 +171,7 @@ univariate for remaining pitch types.
 Minimum 50 pitches per pitcher × season × pitch type to filter position players.
 Minimum 3 distinct seasons per pitcher for model inclusion. Regular season only.
 2020 COVID shortened season (60 games) retained with year random effect.
+When bridging Lahman and Chadwick IDs, defensive deduplication (`drop_duplicates`) is enforced to prevent rare many-to-one MLBAM keys from silently inflating pitcher-season observation counts.
 
 ---
 

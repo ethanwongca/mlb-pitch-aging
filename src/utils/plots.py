@@ -84,7 +84,7 @@ def _plot_mixed_curve(
     """Mixed-effects curve with optional peak annotation."""
     ax.plot(ages, y_shifted, color=color, lw=2.5, zorder=3, label="Mixed-effects")
 
-    peak_age = row.get("peak_age_mean", row.get("peak_age"))
+    peak_age = row.get("peak_age_median", row.get("peak_age"))
     if pd.notna(peak_age) and 21 <= peak_age <= 38:
         pa_c = peak_age - age_mean
         y_pk = (
@@ -254,7 +254,7 @@ def plot_spin_velo_divergence(
             target_ax.tick_params(axis="y", labelcolor=line_color)
 
             if outcome == "mean_spin_rate":
-                peak_age = row.get("peak_age_mean", row.get("peak_age"))
+                peak_age = row.get("peak_age_median", row.get("peak_age"))
                 if pd.notna(peak_age) and 21 <= peak_age <= 38:
                     ax2.axvline(peak_age, color=color, lw=1, ls=":", alpha=0.8)
                     ax2.annotate(
@@ -768,7 +768,7 @@ def plot_delta_method_comparison(
                 label="Mixed-effects",
             )
 
-            peak_age = row.get("peak_age_mean", row.get("peak_age"))
+            peak_age = row.get("peak_age_median", row.get("peak_age"))
             if pd.notna(peak_age) and 21 <= peak_age <= 38:
                 pa_c = peak_age - age_mean
                 y_pk = float(
@@ -821,201 +821,6 @@ def plot_delta_method_comparison(
         print(f"  Saved: {fname.name}")
 
 
-def plot_sdi_distributions(
-    sdi_df: pd.DataFrame,
-    out_dir: Path,
-    pitch_types: list[str] | None = None,
-    clip: float = 3.0,
-) -> None:
-    """
-    Violin + strip plot of SDI per pitch type.
-    Reference lines at balanced thresholds (0.8 and 1.2).
-    Clips to ±clip to suppress near-zero velo-slope outliers.
-    """
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    if pitch_types is None:
-        pitch_types = [
-            pt
-            for pt in ["FF", "SL", "SI", "CH", "CU", "FC"]
-            if pt in sdi_df["pitch_type"].unique()
-        ]
-
-    sdi_col = "sdi_mean" if "sdi_mean" in sdi_df.columns else "sdi"
-    plot_df = (
-        sdi_df[sdi_df["pitch_type"].isin(pitch_types)]
-        .dropna(subset=[sdi_col])
-        .query(f"{sdi_col} >= -{clip} and {sdi_col} <= {clip}")
-        .copy()
-    )
-
-    fig, ax = plt.subplots(figsize=(10, 4.5))
-
-    positions = list(range(len(pitch_types)))
-    for i, pt in enumerate(pitch_types):
-        pt_data = plot_df[plot_df["pitch_type"] == pt][sdi_col].values
-        if len(pt_data) < 5:
-            continue
-        color = PITCH_COLORS.get(pt, "steelblue")
-
-        parts = ax.violinplot(
-            pt_data, positions=[i], widths=0.65, showmedians=False, showextrema=False
-        )
-        for pc in parts["bodies"]:
-            pc.set_facecolor(color)
-            pc.set_alpha(0.35)
-
-        rng = np.random.default_rng(42 + i)
-        jitter = rng.uniform(-0.08, 0.08, size=len(pt_data))
-        ax.scatter(
-            np.full(len(pt_data), i) + jitter,
-            pt_data,
-            color=color,
-            alpha=0.4,
-            s=8,
-            zorder=3,
-        )
-
-        median = float(np.median(pt_data))
-        ax.plot([i - 0.18, i + 0.18], [median, median], color=color, lw=2.5, zorder=4)
-
-    # Reference lines spanning the full plot width
-    n = len(pitch_types)
-    for y, ls, lw, label in [
-        (1.0, "-", 1.5, "Balanced (SDI = 1.0)"),
-        (1.2, "--", 1.0, "Spin-first threshold (1.2)"),
-        (0.8, "--", 1.0, "Velo-first threshold (0.8)"),
-    ]:
-        ax.hlines(
-            y,
-            xmin=-0.5,
-            xmax=n - 0.5,
-            colors="#374151" if ls == "-" else "#9ca3af",
-            linewidths=lw,
-            linestyles=ls,
-            alpha=0.6,
-            label=label,
-            zorder=1,
-        )
-
-    ax.set_xlim(-0.5, n - 0.5)
-    ax.set_ylim(-clip - 0.2, clip + 0.2)
-    ax.set_xticks(positions)
-    ax.set_xticklabels([PITCH_LABELS.get(pt, pt) for pt in pitch_types])
-    ax.set_ylabel("Stuff Durability Index (SDI)")
-    ax.set_title(
-        "SDI Distribution by Pitch Type\n"
-        "SDI = (spin slope / pop SD) / (velo slope / pop SD)",
-        fontweight="bold",
-    )
-    ax.legend(fontsize=8, frameon=False, loc="upper right")
-
-    fig.tight_layout()
-    fname = out_dir / "sdi_distributions.png"
-    fig.savefig(fname, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {fname.name}")
-
-
-def plot_scd_curves(
-    scd_df: pd.DataFrame,
-    outcome: str,
-    out_dir: Path,
-    pitch_types: list[str] | None = None,
-) -> None:
-    """
-    Line + shading plot of naive vs corrected decline rates across ages.
-    Shows bias growing with age — one panel per pitch type.
-    """
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    if pitch_types is None:
-        pitch_types = [
-            pt
-            for pt in ["FF", "SL", "SI", "CH", "CU"]
-            if pt in scd_df["pitch_type"].unique()
-        ]
-
-    fig, axes = plt.subplots(
-        1, len(pitch_types), figsize=(4 * len(pitch_types), 4), sharey=True
-    )
-    if len(pitch_types) == 1:
-        axes = [axes]
-
-    ylabel = OUTCOME_LABELS.get(outcome, outcome)
-    fig.suptitle(
-        f"Naive vs Selection-Corrected Decline Rate — {ylabel}",
-        fontsize=12,
-        fontweight="bold",
-    )
-
-    for ax, pt in zip(axes, pitch_types):
-        sub = scd_df[
-            (scd_df["pitch_type"] == pt) & (scd_df["outcome"] == outcome)
-        ].sort_values("eval_age")
-
-        if sub.empty:
-            ax.set_title(PITCH_LABELS.get(pt, pt), fontsize=10)
-            continue
-
-        color = PITCH_COLORS.get(pt, "steelblue")
-        ages = sub["eval_age"].values
-
-        # Prepend age 30 with identical naive/corrected = 0 to anchor the lines
-        # and make the growing divergence more visually dramatic
-        ages_ext = np.concatenate([[30], ages])
-        naive_ext = np.concatenate(
-            [[sub["naive_rate"].iloc[0]], sub["naive_rate"].values]
-        )
-        corrected_ext = np.concatenate(
-            [[sub["corrected_rate"].iloc[0]], sub["corrected_rate"].values]
-        )
-
-        ax.plot(
-            ages_ext,
-            naive_ext,
-            color="#6b7280",
-            lw=2,
-            ls="--",
-            marker="o",
-            markersize=5,
-            label="Naive",
-        )
-        ax.plot(
-            ages_ext,
-            corrected_ext,
-            color=color,
-            lw=2,
-            marker="o",
-            markersize=5,
-            label="Corrected",
-        )
-        ax.fill_between(
-            ages_ext,
-            naive_ext,
-            corrected_ext,
-            alpha=0.18,
-            color=color,
-            label="Survivorship bias",
-        )
-
-        ax.axhline(0, color="#374151", lw=0.8, ls="-", alpha=0.3)
-        ax.set_xlim(29.5, ages.max() + 0.5)
-        ax.set_title(
-            PITCH_LABELS.get(pt, pt), fontsize=10, fontweight="bold", color=color
-        )
-        ax.set_xlabel("Age")
-        ax.xaxis.set_major_locator(mticker.MultipleLocator(3))
-        ax.legend(fontsize=7, frameon=False)
-
-    axes[0].set_ylabel(f"{ylabel} / yr")
-    fig.tight_layout()
-    fname = out_dir / f"scd_curves_{outcome}.png"
-    fig.savefig(fname, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {fname.name}")
 
 
 def plot_bivariate_correlation(
@@ -1141,7 +946,7 @@ def plot_bivariate_peak_comparison(
             ]
             if not uni_row.empty:
                 uni_peak_val = uni_row.iloc[0].get(
-                    "peak_age_mean", uni_row.iloc[0].get("peak_age")
+                    "peak_age_median", uni_row.iloc[0].get("peak_age")
                 )
                 if pd.notna(uni_peak_val):
                     ax.axvline(
@@ -1268,105 +1073,6 @@ def plot_scg_comparison(
 
     fig.tight_layout()
     fname = out_dir / "scg_comparison.png"
-    fig.savefig(fname, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved: {fname.name}")
-
-
-def plot_scd_bars(
-    scd_df: pd.DataFrame,
-    outcome: str,
-    out_dir: Path,
-    eval_ages: list[float] | None = None,
-    pitch_types: list[str] | None = None,
-) -> None:
-    """
-    Paired bar chart of naive vs corrected decline rates at key eval ages.
-    No inline annotations — visual difference speaks for itself.
-    """
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    if pitch_types is None:
-        pitch_types = [
-            pt
-            for pt in ["FF", "SL", "SI", "CH", "CU"]
-            if pt in scd_df["pitch_type"].unique()
-        ]
-    if eval_ages is None:
-        eval_ages = sorted(scd_df["eval_age"].unique().tolist())
-
-    n_ages = len(eval_ages)
-    fig, axes = plt.subplots(1, n_ages, figsize=(4 * n_ages, 4.5), sharey=True)
-    if n_ages == 1:
-        axes = [axes]
-
-    ylabel = OUTCOME_LABELS.get(outcome, outcome)
-    fig.suptitle(
-        f"Naive vs IPW-Corrected Decline Rates — {ylabel}",
-        fontsize=12,
-        fontweight="bold",
-    )
-
-    for ax, eval_age in zip(axes, eval_ages):
-        sub = scd_df[
-            (scd_df["outcome"] == outcome) & (scd_df["eval_age"] == eval_age)
-        ].set_index("pitch_type")
-        x = np.arange(len(pitch_types))
-        width = 0.35
-        labels = [PITCH_LABELS.get(pt, pt) for pt in pitch_types]
-
-        naive_vals = [
-            sub.loc[pt, "naive_rate"] if pt in sub.index else np.nan
-            for pt in pitch_types
-        ]
-        corrected_vals = [
-            sub.loc[pt, "corrected_rate"] if pt in sub.index else np.nan
-            for pt in pitch_types
-        ]
-
-        ax.bar(
-            x - width / 2, naive_vals, width, label="Naive", color="#9ca3af", alpha=0.85
-        )
-        ax.bar(
-            x + width / 2,
-            corrected_vals,
-            width,
-            label="Corrected",
-            color="#1d4ed8",
-            alpha=0.85,
-        )
-        ax.axhline(0, color="#374151", lw=0.8, ls="-", alpha=0.4)
-
-        # Flag SI reversal — corrected > naive means selection bias runs opposite direction
-        si_idx = pitch_types.index("SI") if "SI" in pitch_types else None
-        if si_idx is not None and "SI" in sub.index:
-            si_scd = sub.loc["SI", "scd"]
-            if pd.notna(si_scd) and si_scd < 0:
-                ax.annotate(
-                    "reversal",
-                    xy=(
-                        si_idx,
-                        min(naive_vals[si_idx] or 0, corrected_vals[si_idx] or 0),
-                    ),
-                    xytext=(0, -14),
-                    textcoords="offset points",
-                    fontsize=6.5,
-                    ha="center",
-                    color="#6b7280",
-                    style="italic",
-                )
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=30, ha="right")
-        ax.set_title(f"Age {eval_age:.0f}", fontsize=10)
-        ax.set_xlabel("Pitch type")
-        if ax is axes[0]:
-            ax.set_ylabel("Decline rate per year")
-        ax.legend(fontsize=8, frameon=False)
-
-    fig.tight_layout()
-    fname = out_dir / f"scd_bars_{outcome}.png"
     fig.savefig(fname, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {fname.name}")
@@ -1545,7 +1251,7 @@ def plot_spaghetti(
                 label="Population curve (mixed-effects)",
             )
 
-            peak_age = row.get("peak_age_mean", row.get("peak_age"))
+            peak_age = row.get("peak_age_median", row.get("peak_age"))
             if pd.notna(peak_age) and 21 <= peak_age <= 38:
                 pa_c = peak_age - age_mean
                 y_pk = float(

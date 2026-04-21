@@ -36,7 +36,6 @@ def peak_age_from_posterior(
             "peak_age": None,
             "hdi_lo": None,
             "hdi_hi": None,
-            "peak_age_sd": None,
             "pct_b2_negative": None,
         }
 
@@ -48,29 +47,28 @@ def peak_age_from_posterior(
             "peak_age": None,
             "hdi_lo": None,
             "hdi_hi": None,
-            "peak_age_sd": None,
             "pct_b2_negative": pct_neg,
         }
 
-    peak_samples = age_mean + (-b1[mask] / (2 * b2[mask]))
-    peak_samples = peak_samples[(peak_samples > 15) & (peak_samples < 50)]
+    peak_samples_raw = age_mean + (-b1[mask] / (2 * b2[mask]))
+    peak_median = float(np.median(peak_samples_raw))
+    
+    peak_samples = peak_samples_raw[(peak_samples_raw > 15) & (peak_samples_raw < 50)]
 
     if len(peak_samples) < 100:
         return {
             "peak_age": None,
             "hdi_lo": None,
             "hdi_hi": None,
-            "peak_age_sd": None,
             "pct_b2_negative": pct_neg,
         }
 
     hdi = az.hdi(peak_samples, hdi_prob=hdi_prob)
 
     return {
-        "peak_age": round(float(np.mean(peak_samples)), 3),
+        "peak_age": round(peak_median, 3),
         "hdi_lo": round(float(hdi[0]), 3),
         "hdi_hi": round(float(hdi[1]), 3),
-        "peak_age_sd": round(float(np.std(peak_samples)), 4),
         "pct_b2_negative": round(pct_neg, 4),
     }
 
