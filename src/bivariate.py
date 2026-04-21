@@ -21,8 +21,8 @@ PLOTS_DIR = BASE_DIR / "plots"
 PITCH_TYPES = ["FF", "SI"]
 MIN_SEASONS = 3
 CHAINS = 4
-DRAWS_BIVARIATE = 2000
-TUNE_BIVARIATE = 2000
+DRAWS_BIVARIATE = 3000
+TUNE_BIVARIATE = 3000
 TARGET_ACCEPT_BIVARIATE = 0.95
 NUTS_KWARGS_BIVARIATE = {"max_treedepth": 12}
 
@@ -73,7 +73,9 @@ def build_bivariate_model(data: dict) -> pm.Model:
             "chol", n=2, eta=2, sd_dist=sd_dist, compute_corr=True
         )
 
-        u = pm.MvNormal("u", mu=np.zeros(2), chol=chol, shape=(data["n_pitchers"], 2))
+        # Non-centered parameterization: avoids funnel geometry in large hierarchies
+        z = pm.Normal("z", mu=0, sigma=1, shape=(data["n_pitchers"], 2))
+        u = pm.Deterministic("u", pm.math.dot(z, chol.T))
 
         age_c = data["age_c"]
         age_c_sq = data["age_c_sq"]
@@ -143,7 +145,6 @@ if __name__ == "__main__":
                 "b2_spin",
                 "peak_age_velo",
                 "peak_age_spin",
-                "chol_corr",
             ],
         )
         log.info("\n" + summary.to_string())
