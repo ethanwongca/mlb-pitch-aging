@@ -47,7 +47,7 @@ def compute_scg(results_df: pd.DataFrame, experiment: str = "base") -> pd.DataFr
     return scg_df.sort_values("scg", ascending=False).reset_index(drop=True)
 
 
-def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path, experiment: str = "base", age_mean: float = 30.0) -> pd.DataFrame:
+def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path, age_mean: float, experiment: str = "base") -> pd.DataFrame:
     rows = []
     for pt in pitch_types:
         nc_path = master_data_dir / f"bivariate_{experiment}_{pt}.nc"
