@@ -2,10 +2,7 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-
-from utils import OUTCOME_LABELS
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MASTER_DATA_DIR = BASE_DIR / "master_data"
@@ -121,29 +118,12 @@ def build_table_s3(decline_base: pd.DataFrame) -> pd.DataFrame:
     return t.sort_values(["pitch_type", "outcome", "eval_age"]).reset_index(drop=True)
 
 
-def build_table_s4(scd_df: pd.DataFrame) -> pd.DataFrame:
-    """SCD results — all pitch types, both outcomes, ages 32/35/38."""
-    t = scd_df[scd_df["eval_age"].isin([32, 35, 38])].copy()
-    t["pitch_type"] = pd.Categorical(
-        t["pitch_type"], categories=PITCH_ORDER, ordered=True
-    )
-    return t.sort_values(["pitch_type", "outcome", "eval_age"]).reset_index(drop=True)
 
-
-def build_table_s5(sdi_df: pd.DataFrame) -> pd.DataFrame:
-    """SDI summary by pitch type."""
-    t = (
-        sdi_df.groupby("pitch_type")
-        .agg(
-            n_pitchers=("pitcher", "count"),
-            median_sdi=("sdi", "median"),
-            pct_spin_first=("sdi", lambda x: (x > 1.2).mean() * 100),
-            pct_velo_first=("sdi", lambda x: (x < 0.8).mean() * 100),
-            pct_balanced=("sdi", lambda x: ((x >= 0.8) & (x <= 1.2)).mean() * 100),
-        )
-        .round(2)
-        .reset_index()
-    )
+def build_table_s5(scg_df: pd.DataFrame) -> pd.DataFrame:
+    """SCG summary by pitch type."""
+    t = scg_df[["pitch_type", "velo_peak_age", "velo_hdi_lo", "velo_hdi_hi",
+                 "spin_peak_age", "spin_hdi_lo", "spin_hdi_hi", "scg"]].copy()
+    t = t.round(2)
     t["pitch_type"] = pd.Categorical(
         t["pitch_type"], categories=PITCH_ORDER, ordered=True
     )
@@ -226,15 +206,13 @@ if __name__ == "__main__":
     peak_base = _load_peak_cis("base")
     peak_ext = _load_peak_cis("with_ext")
     decline_base = _load_decline_cis("base")
-    scd_df = pd.read_csv(MASTER_DATA_DIR / "scd_results.csv")
-    sdi_df = pd.read_csv(MASTER_DATA_DIR / "sdi_results.csv")
+    scg_df = pd.read_csv(MASTER_DATA_DIR / "scg_results.csv")
 
     print("\nGenerating supplementary tables...")
     save(build_table_s1(results_df, peak_base, decline_base), "table_s1_model_results")
     save(build_table_s2(peak_base, peak_ext), "table_s2_peak_age_cis")
     save(build_table_s3(decline_base), "table_s3_decline_rate_cis")
-    save(build_table_s4(scd_df), "table_s4_scd_results")
-    save(build_table_s5(sdi_df), "table_s5_sdi_summary")
+    save(build_table_s5(scg_df), "table_s4_scg_summary")
 
     print("\nGenerating main paper tables...")
     save(build_table1(decline_base), "table1_velo_decline_rates")

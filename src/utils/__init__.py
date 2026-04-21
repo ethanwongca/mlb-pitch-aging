@@ -25,9 +25,8 @@ from .plots import plot_pareto_k_heatmap
 from .plots import plot_peak_age_ci
 from .plots import plot_bivariate_correlation
 from .plots import plot_bivariate_peak_comparison
-from .plots import plot_scd_bars
-from .plots import plot_scd_curves
-from .plots import plot_sdi_distributions
+from .plots import plot_scg_bars
+from .plots import plot_scg_dumbbell
 from .plots import plot_spin_velo_divergence
 from .plots import plot_spaghetti
 from .plots import plot_survivorship_bias
@@ -58,9 +57,8 @@ __all__ = [
     "plot_peak_age_ci",
     "plot_bivariate_correlation",
     "plot_bivariate_peak_comparison",
-    "plot_scd_bars",
-    "plot_scd_curves",
-    "plot_sdi_distributions",
+    "plot_scg_bars",
+    "plot_scg_dumbbell",
     "plot_spin_velo_divergence",
     "plot_survivorship_bias",
     "plot_spaghetti",

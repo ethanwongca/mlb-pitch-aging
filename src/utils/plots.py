@@ -842,10 +842,11 @@ def plot_sdi_distributions(
             if pt in sdi_df["pitch_type"].unique()
         ]
 
+    sdi_col = "sdi_mean" if "sdi_mean" in sdi_df.columns else "sdi"
     plot_df = (
         sdi_df[sdi_df["pitch_type"].isin(pitch_types)]
-        .dropna(subset=["sdi"])
-        .query(f"sdi >= -{clip} and sdi <= {clip}")
+        .dropna(subset=[sdi_col])
+        .query(f"{sdi_col} >= -{clip} and {sdi_col} <= {clip}")
         .copy()
     )
 
@@ -853,7 +854,7 @@ def plot_sdi_distributions(
 
     positions = list(range(len(pitch_types)))
     for i, pt in enumerate(pitch_types):
-        pt_data = plot_df[plot_df["pitch_type"] == pt]["sdi"].values
+        pt_data = plot_df[plot_df["pitch_type"] == pt][sdi_col].values
         if len(pt_data) < 5:
             continue
         color = PITCH_COLORS.get(pt, "steelblue")
@@ -876,7 +877,7 @@ def plot_sdi_distributions(
             zorder=3,
         )
 
-        median = np.median(pt_data)
+        median = float(np.median(pt_data))
         ax.plot([i - 0.18, i + 0.18], [median, median], color=color, lw=2.5, zorder=4)
 
     # Reference lines spanning the full plot width
@@ -1510,3 +1511,165 @@ def plot_spaghetti(
         fig.savefig(fname, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {fname.name}")
+
+
+def plot_scg_dumbbell(
+    scg_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    """
+    Dumbbell plot: velo peak age (orange) vs spin peak age (blue) per pitch type.
+    The gap between them is the Stuff Compensation Gap. HDI shown as thin bars.
+    Pitch types sorted by SCG descending.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    df = scg_df.sort_values("scg", ascending=True).reset_index(drop=True)
+    n = len(df)
+
+    fig, ax = plt.subplots(figsize=(9, max(3.5, 0.7 * n + 1.5)))
+
+    VELO_COLOR = "#e07b39"
+    SPIN_COLOR = "#3b82f6"
+    GAP_COLOR_POS = "#22c55e"
+    GAP_COLOR_NEG = "#ef4444"
+
+    for i, row in df.iterrows():
+        pt = row["pitch_type"]
+        vp = row["velo_peak_age"]
+        sp = row["spin_peak_age"]
+        scg = row["scg"]
+
+        gap_color = GAP_COLOR_POS if scg >= 0 else GAP_COLOR_NEG
+
+        # Connecting line (compensation window)
+        ax.plot(
+            [min(vp, sp), max(vp, sp)],
+            [i, i],
+            color=gap_color,
+            lw=4,
+            alpha=0.35,
+            solid_capstyle="round",
+            zorder=1,
+        )
+
+        # HDI bars
+        if pd.notna(row.get("velo_hdi_lo")) and pd.notna(row.get("velo_hdi_hi")):
+            ax.plot(
+                [row["velo_hdi_lo"], row["velo_hdi_hi"]],
+                [i, i],
+                color=VELO_COLOR,
+                lw=1.5,
+                alpha=0.5,
+                zorder=2,
+            )
+        if pd.notna(row.get("spin_hdi_lo")) and pd.notna(row.get("spin_hdi_hi")):
+            ax.plot(
+                [row["spin_hdi_lo"], row["spin_hdi_hi"]],
+                [i, i],
+                color=SPIN_COLOR,
+                lw=1.5,
+                alpha=0.5,
+                zorder=2,
+            )
+
+        # Peak dots
+        ax.scatter(vp, i, color=VELO_COLOR, s=90, zorder=4, linewidths=0)
+        ax.scatter(sp, i, color=SPIN_COLOR, s=90, zorder=4, linewidths=0)
+
+        # SCG label
+        sign = "+" if scg >= 0 else ""
+        ax.text(
+            max(vp, sp) + 0.4,
+            i,
+            f"{sign}{scg:.1f} yr",
+            va="center",
+            fontsize=9,
+            color=gap_color,
+            fontweight="bold",
+        )
+
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([PITCH_LABELS.get(row["pitch_type"], row["pitch_type"]) for _, row in df.iterrows()])
+    ax.set_xlabel("Age (years)")
+    ax.set_xlim(14, 42)
+    ax.set_title(
+        "Stuff Compensation Gap — Spin Peak Age vs Velocity Peak Age",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    ax.grid(axis="x", alpha=0.2, zorder=0)
+    ax.set_axisbelow(True)
+
+    from matplotlib.lines import Line2D
+    legend_handles = [
+        Line2D([0], [0], marker="o", color="w", markerfacecolor=VELO_COLOR, markersize=9, label="Velocity peak age"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor=SPIN_COLOR, markersize=9, label="Spin rate peak age"),
+        Line2D([0], [0], color=GAP_COLOR_POS, lw=4, alpha=0.5, label="Compensation window (SCG > 0)"),
+        Line2D([0], [0], color=GAP_COLOR_NEG, lw=4, alpha=0.5, label="No compensation (SCG < 0)"),
+    ]
+    ax.legend(handles=legend_handles, fontsize=8.5, frameon=False, loc="lower right")
+
+    fig.tight_layout()
+    fname = out_dir / "scg_dumbbell.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
+def plot_scg_bars(
+    scg_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    """
+    Horizontal bar chart of SCG per pitch type, sorted descending.
+    Green = spin compensates velo decline; red = no compensation.
+    Annotated with exact SCG and peak age breakdown.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    df = scg_df.sort_values("scg", ascending=True).reset_index(drop=True)
+    n = len(df)
+
+    fig, ax = plt.subplots(figsize=(8, max(3.5, 0.65 * n + 1.5)))
+
+    for i, row in df.iterrows():
+        scg = row["scg"]
+        color = "#22c55e" if scg >= 0 else "#ef4444"
+        ax.barh(i, scg, color=color, alpha=0.75, height=0.55)
+
+        sign = "+" if scg >= 0 else ""
+        label = (
+            f"{sign}{scg:.1f} yr  "
+            f"(velo peak {row['velo_peak_age']:.1f}, spin peak {row['spin_peak_age']:.1f})"
+        )
+        x_pos = max(scg, 0) + 0.15
+        ha = "left"
+        ax.text(x_pos, i, label, va="center", fontsize=8.5, color="#1f2937", ha=ha)
+
+    ax.axvline(0, color="#374151", lw=1.2, ls="-", alpha=0.5)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([PITCH_LABELS.get(row["pitch_type"], row["pitch_type"]) for _, row in df.iterrows()])
+    ax.set_xlabel("Stuff Compensation Gap (years)")
+    ax.set_title(
+        "Stuff Compensation Gap by Pitch Type\n"
+        "SCG = spin peak age − velocity peak age",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    ax.grid(axis="x", alpha=0.2, zorder=0)
+    ax.set_axisbelow(True)
+
+    x_min = min(df["scg"].min() - 1.5, -1)
+    x_max = df["scg"].max() + 4
+    ax.set_xlim(x_min, x_max)
+
+    fig.tight_layout()
+    fname = out_dir / "scg_bars.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")

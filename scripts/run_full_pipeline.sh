@@ -47,8 +47,7 @@ run_step "EDA Plots" "python src/eda_plots.py"
 
 run_step "Models" "python src/models.py"
 run_step "Inference" "python src/inference.py"
-run_step "SDI" "python src/sdi.py"
-run_step "SCD" "python src/scd.py"
+run_step "SCG" "python src/scg.py"
 
 # Bivariate can be expensive and may already be done. Set RERUN_BIVARIATE=1 to force rerun.
 if [[ "${RERUN_BIVARIATE:-0}" == "1" ]]; then
