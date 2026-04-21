@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from utils import PITCH_ORDER
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 MASTER_DATA_DIR = BASE_DIR / "master_data"
 TABLES_DIR = BASE_DIR / "tables"
-
-PITCH_ORDER = ["FF", "SL", "SI", "CH", "CU", "FC"]
 
 
 def _load_peak_cis(experiment: str) -> pd.DataFrame:
@@ -173,7 +173,7 @@ def build_table3() -> pd.DataFrame:
 
     rows = []
     for pt in ["FF", "SI"]:
-        nc_path = MASTER_DATA_DIR / f"bivariate_{pt}.nc"
+        nc_path = MASTER_DATA_DIR / f"bivariate_base_{pt}.nc"
         if not nc_path.exists():
             print(f"  Missing {nc_path.name} — skipping {pt}")
             continue

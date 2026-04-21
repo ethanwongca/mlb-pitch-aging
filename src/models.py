@@ -87,7 +87,7 @@ def build_bambi_formula(outcome: str, experiment: str, quadratic: bool = True) -
     if quadratic:
         fixed = f"{outcome} ~ age_c + age_c_sq"
     if experiment == "with_ext":
-        fixed += " + mean_ext"
+        fixed += " + mean_ext_c"
     return fixed + " + (1|pitcher) + (1|year)"
 
 
@@ -266,11 +266,10 @@ def extract_posterior_summaries(
             peak_samples_raw = age_mean + (
                 -b1_samples[neg_mask] / (2 * b2_samples[neg_mask])
             )
-            peak_median_raw = float(np.median(peak_samples_raw))
             peak_samples = peak_samples_raw[(peak_samples_raw > 15) & (peak_samples_raw < 50)]
             if len(peak_samples) >= 100:
                 hdi_pa = az.hdi(peak_samples, hdi_prob=0.95)
-                peak_age_median = round(peak_median_raw, 3)
+                peak_age_median = round(float(np.median(peak_samples)), 3)
                 peak_age_lo = round(float(hdi_pa[0]), 3)
                 peak_age_hi = round(float(hdi_pa[1]), 3)
 
@@ -373,9 +372,7 @@ if __name__ == "__main__":
         for pitch_type, pt_df in pitch_type_dict.items():
             for outcome in OUTCOMES:
                 count += 1
-                required = [outcome, "age_c", "age_c_sq", "year", "pitcher"] + (
-                    ["mean_ext"] if experiment == "with_ext" else []
-                )
+                required = [outcome, "age_c", "age_c_sq", "year", "pitcher", "mean_ext_c"]
                 model_df = pt_df.dropna(subset=required).copy()
                 model_df = filter_pitchers_by_min_distinct_seasons(
                     model_df, MIN_SEASONS_PER_PITCHER

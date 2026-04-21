@@ -6,6 +6,7 @@ from .utils import DEFAULT_OUTCOMES
 from .utils import OUTCOME_LABELS
 from .utils import PITCH_COLORS
 from .utils import PITCH_LABELS
+from .utils import PITCH_ORDER
 from .utils import get_age_mean
 from .utils import get_data_pitch_type_dict
 from .utils import get_default_outcomes
@@ -38,6 +39,7 @@ __all__ = [
     "OUTCOME_LABELS",
     "PITCH_COLORS",
     "PITCH_LABELS",
+    "PITCH_ORDER",
     "load_data",
     "get_data_pitch_type_dict",
     "get_valid_pitch_types",

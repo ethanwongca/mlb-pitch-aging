@@ -37,10 +37,6 @@ def get_pitching_stats_year(year: int, parallel: bool = False) -> None:
         "game_type",
     ]
 
-    # spin axis was introduced in 2020
-    if "spin_axis" in df.columns:
-        stats_record += ["spin_axis"]
-
     # Only Regular Season + Pitching Reqs we need
     pitching_df = df[df["game_type"] == "R"][stats_record].copy()
 
@@ -64,10 +60,6 @@ def get_pitching_stats_year(year: int, parallel: bool = False) -> None:
         "std_eff_speed": ("effective_speed", "std"),
         "n_pitches": ("release_speed", "count"),
     }
-
-    if "spin_axis" in pitching_df.columns:
-        agg_dict["mean_spin_axis"] = ("spin_axis", "mean")
-        agg_dict["std_spin_axis"] = ("spin_axis", "std")
 
     agg = pitching_df.groupby(groupby_cols).agg(**agg_dict).reset_index()
 

@@ -9,11 +9,11 @@ import seaborn as sns
 import pandas as pd
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "master_data"
-PLOTS_DIR = BASE_DIR / "eda_plots"
+from utils import PITCH_ORDER as VALID_PITCH_TYPES
 
-VALID_PITCH_TYPES = ["FF", "SL", "SI", "CH", "CU", "FC"]
+BASE_DIR = Path(__file__).resolve().parent.parent
+MASTER_DATA_DIR = BASE_DIR / "master_data"
+PLOTS_DIR = BASE_DIR / "eda_plots"
 
 METRICS = [
     ("mean_velo", "std_velo", "Velocity (mph)", "Mean Velocity"),
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     sns.set_theme(style="whitegrid", palette="muted")
 
-    df = pd.read_csv(DATA_DIR / "pitching_master.csv")
+    df = pd.read_csv(MASTER_DATA_DIR / "pitching_master.csv")
     df = df.drop(columns=["age_c", "age_c_sq"], errors="ignore")
     df = df[df["pitch_type"].isin(VALID_PITCH_TYPES)]
 
@@ -84,9 +84,4 @@ if __name__ == "__main__":
         plot_by_age(df, metric, std_col, ylabel, title)
         plot_by_year(df, metric, ylabel, title)
 
-    if "mean_spin_axis" in df.columns:
-        spin_df = df[df["year"] >= 2020]
-        plot_by_age(
-            spin_df, "mean_spin_axis", "std_spin_axis", "Spin Axis (deg)", "Spin Axis"
-        )
-        plot_by_year(spin_df, "mean_spin_axis", "Spin Axis (deg)", "Spin Axis")
+

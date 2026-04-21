@@ -12,7 +12,6 @@ DEFAULT_OUTCOMES = [
     "mean_pfx_x",
     "mean_pfx_x_norm",
     "mean_pfx_z",
-    "mean_spin_axis",
 ]
 
 PITCH_COLORS = {
@@ -23,6 +22,7 @@ PITCH_COLORS = {
     "CU": "#9B5DE5",
     "FC": "#F72585",
 }
+PITCH_ORDER = ["FF", "SL", "SI", "CH", "CU", "FC"]
 PITCH_LABELS = {
     "FF": "4-Seam FB",
     "SL": "Slider",
@@ -37,7 +37,6 @@ OUTCOME_LABELS = {
     "mean_pfx_x": "Horizontal Break (ft)",
     "mean_pfx_x_norm": "Horizontal Break, norm (ft)",
     "mean_pfx_z": "Vertical Break (ft)",
-    "mean_spin_axis": "Spin Axis (°)",
 }
 
 

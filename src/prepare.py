@@ -59,17 +59,21 @@ if __name__ == "__main__":
     df = df.dropna(subset=["age"])
     df["age"] = df["age"].astype(int)
 
-    df["age_sq"] = df["age"] ** 2
-    age_mean = df["age"].mean()
-    df["age_c"] = df["age"] - age_mean
-    df["age_c_sq"] = df["age_c"] ** 2
-    df = df.drop(columns=["key_mlbam", "birthYear"])
-
     # Defensive deduplication to prevent model inflation
     pre_dedup = len(df)
     df = df.drop_duplicates(subset=["pitcher", "year", "pitch_type", "p_throws"])
     if len(df) < pre_dedup:
         print(f"Dropped {pre_dedup - len(df)} duplicated pipeline rows!")
+
+    df["age_sq"] = df["age"] ** 2
+    age_mean = df["age"].mean()
+    df["age_c"] = df["age"] - age_mean
+    df["age_c_sq"] = df["age_c"] ** 2
+
+    if "mean_ext" in df.columns:
+        df["mean_ext_c"] = df["mean_ext"] - df["mean_ext"].mean()
+
+    df = df.drop(columns=["key_mlbam", "birthYear"])
 
     # Save master
     MASTER_DATA_DIR.mkdir(parents=True, exist_ok=True)

@@ -12,13 +12,12 @@ import arviz as az
 import numpy as np
 import pandas as pd
 
-from utils import get_age_mean, load_data, setup_logger
+from utils import PITCH_ORDER, get_age_mean, load_data, setup_logger
 from utils.plots import plot_decline_rate_ci, plot_peak_age_ci
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MASTER_DIR = BASE_DIR / "master_data"
 PLOTS_DIR = BASE_DIR / "plots"
-PITCH_ORDER = ["FF", "SL", "SI", "CH", "CU", "FC"]
 
 
 def peak_age_from_posterior(

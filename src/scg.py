@@ -6,7 +6,7 @@ import arviz as az
 import numpy as np
 import pandas as pd
 
-from utils import setup_logger
+from utils import setup_logger, load_data, get_age_mean
 from utils.plots import plot_scg_bars, plot_scg_comparison, plot_scg_dumbbell
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,18 +47,33 @@ def compute_scg(results_df: pd.DataFrame, experiment: str = "base") -> pd.DataFr
     return scg_df.sort_values("scg", ascending=False).reset_index(drop=True)
 
 
-def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.DataFrame:
+def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path, experiment: str = "base", age_mean: float = 30.0) -> pd.DataFrame:
     rows = []
     for pt in pitch_types:
-        nc_path = master_data_dir / f"bivariate_{pt}.nc"
+        nc_path = master_data_dir / f"bivariate_{experiment}_{pt}.nc"
         if not nc_path.exists():
             continue
 
         idata = az.from_netcdf(str(nc_path))
         post = idata.posterior
 
-        peak_velo = post["peak_age_velo"].values.flatten()
-        peak_spin = post["peak_age_spin"].values.flatten()
+        b1_velo = post["b1_velo"].values.flatten()
+        b2_velo = post["b2_velo"].values.flatten()
+        b1_spin = post["b1_spin"].values.flatten()
+        b2_spin = post["b2_spin"].values.flatten()
+
+        mask = (b2_velo < 0) & (b2_spin < 0)
+        
+        b1_v = b1_velo[mask]
+        b2_v = b2_velo[mask]
+        b1_s = b1_spin[mask]
+        b2_s = b2_spin[mask]
+
+        if len(b1_v) < 100:
+            continue
+
+        peak_velo = age_mean + (-b1_v / (2 * b2_v))
+        peak_spin = age_mean + (-b1_s / (2 * b2_s))
 
         # Filter to physically plausible peak ages — mirrors the bounds used in
         # inference.py's peak_age_from_posterior to keep comparisons consistent.
@@ -94,6 +109,9 @@ def compute_bivariate_scg(pitch_types: list[str], master_data_dir: Path) -> pd.D
 if __name__ == "__main__":
     log = setup_logger("scg", MASTER_DATA_DIR / "scg.log")
 
+    df = load_data()
+    age_mean = get_age_mean(df)
+
     results_df = pd.read_csv(MASTER_DATA_DIR / "model_results.csv")
     scg_df = compute_scg(results_df, experiment="base")
 
@@ -106,7 +124,7 @@ if __name__ == "__main__":
     )
 
     from bivariate import PITCH_TYPES as BIVARIATE_PITCH_TYPES
-    biv_scg_df = compute_bivariate_scg(BIVARIATE_PITCH_TYPES, MASTER_DATA_DIR)
+    biv_scg_df = compute_bivariate_scg(BIVARIATE_PITCH_TYPES, MASTER_DATA_DIR, experiment="base", age_mean=age_mean)
     if not biv_scg_df.empty:
         biv_out_path = MASTER_DATA_DIR / "scg_bivariate_results.csv"
         biv_scg_df.to_csv(biv_out_path, index=False)

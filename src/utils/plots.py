@@ -392,7 +392,6 @@ def plot_ext_loo_heatmap(
             "mean_pfx_z",
             "mean_pfx_x_norm",
             "mean_pfx_x",
-            "mean_spin_axis",
         ]
         if o in delta.columns
     ]
@@ -464,7 +463,6 @@ def plot_pareto_k_heatmap(
             "mean_pfx_z",
             "mean_pfx_x_norm",
             "mean_pfx_x",
-            "mean_spin_axis",
         ]
         if o in pivot.columns
     ]

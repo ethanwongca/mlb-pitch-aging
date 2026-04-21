@@ -35,7 +35,7 @@ def prepare_bivariate_data(
 ) -> dict:
     pt_df = (
         df[df["pitch_type"] == pitch_type]
-        .dropna(subset=[outcome_velo, outcome_spin, "age_c", "age_c_sq"])
+        .dropna(subset=[outcome_velo, outcome_spin, "age_c", "age_c_sq", "mean_ext_c"])
         .copy()
     )
 
@@ -57,6 +57,7 @@ def prepare_bivariate_data(
         "year_idx": pt_df["year_idx"].values,
         "age_c": pt_df["age_c"].values,
         "age_c_sq": pt_df["age_c_sq"].values,
+        "mean_ext_c": pt_df["mean_ext_c"].values,
         "velo": pt_df[outcome_velo].values,
         "spin": pt_df[outcome_spin].values,
         "n_pitchers": len(pitchers),
@@ -65,7 +66,7 @@ def prepare_bivariate_data(
     }
 
 
-def build_bivariate_model(data: dict, age_mean: float) -> pm.Model:
+def build_bivariate_model(data: dict, age_mean: float, experiment: str = "base") -> pm.Model:
     velo_sd = float(data["velo"].std())
     spin_sd = float(data["spin"].std())
 
@@ -90,27 +91,31 @@ def build_bivariate_model(data: dict, age_mean: float) -> pm.Model:
         # Year random effect (partial pooling over seasons)
         sd_year = pm.HalfNormal.dist(sigma=np.array([velo_sd, spin_sd]))
         chol_year, _, _ = pm.LKJCholeskyCov(
-            "chol_year", n=2, eta=2, sd_dist=sd_year, compute_corr=False
+            "chol_year", n=2, eta=2, sd_dist=sd_year, compute_corr=True
         )
         z_year = pm.Normal("z_year", mu=0, sigma=1, shape=(data["n_years"], 2))
         u_year = pm.Deterministic("u_year", pm.math.dot(z_year, chol_year.T))
 
         age_c = data["age_c"]
         age_c_sq = data["age_c_sq"]
+        ext_c = data["mean_ext_c"]
         pidx = data["pitcher_idx"]
         yidx = data["year_idx"]
 
         mu_velo = b0_velo + u[pidx, 0] + u_year[yidx, 0] + b1_velo * age_c + b2_velo * age_c_sq
         mu_spin = b0_spin + u[pidx, 1] + u_year[yidx, 1] + b1_spin * age_c + b2_spin * age_c_sq
 
+        if experiment == "with_ext":
+            b_ext_velo = pm.Normal("b_ext_velo", mu=0, sigma=velo_sd / 2)
+            b_ext_spin = pm.Normal("b_ext_spin", mu=0, sigma=spin_sd / 2)
+            mu_velo = mu_velo + b_ext_velo * ext_c
+            mu_spin = mu_spin + b_ext_spin * ext_c
+
         sigma_velo = pm.HalfNormal("sigma_velo", sigma=velo_sd)
         sigma_spin = pm.HalfNormal("sigma_spin", sigma=spin_sd)
 
         pm.Normal("velo_obs", mu=mu_velo, sigma=sigma_velo, observed=data["velo"])
         pm.Normal("spin_obs", mu=mu_spin, sigma=sigma_spin, observed=data["spin"])
-
-        pm.Deterministic("peak_age_velo", age_mean + (-b1_velo / (2 * b2_velo)))
-        pm.Deterministic("peak_age_spin", age_mean + (-b1_spin / (2 * b2_spin)))
 
     return model
 
@@ -129,52 +134,57 @@ if __name__ == "__main__":
     sampler_kwargs = get_pymc_sampler_kwargs(CHAINS)
     log.info(f"Sampler kwargs: {sampler_kwargs}")
 
-    for pt in PITCH_TYPES:
-        log.info(f"\n{'=' * 50}")
-        log.info(f"Bivariate model: {pt}")
+    EXPERIMENTS = ["base", "with_ext"]
 
-        data = prepare_bivariate_data(df, pt)
-        log.info(f"  {data['n_obs']} obs, {data['n_pitchers']} pitchers")
+    for experiment in EXPERIMENTS:
+        for pt in PITCH_TYPES:
+            log.info(f"\n{'=' * 50}")
+            log.info(f"Bivariate model: {pt} [{experiment}]")
 
-        model = build_bivariate_model(data, age_mean)
+            data = prepare_bivariate_data(df, pt)
+            log.info(f"  {data['n_obs']} obs, {data['n_pitchers']} pitchers")
 
-        with model:
-            idata = pm.sample(
-                draws=DRAWS_BIVARIATE,
-                tune=TUNE_BIVARIATE,
-                target_accept=TARGET_ACCEPT_BIVARIATE,
-                chains=CHAINS,
-                progressbar=True,
-                nuts_sampler_kwargs=NUTS_KWARGS_BIVARIATE,
-                **sampler_kwargs,
-            )
+            model = build_bivariate_model(data, age_mean, experiment=experiment)
 
-        out_path = MASTER_DATA_DIR / f"bivariate_{pt}.nc"
-        idata.to_netcdf(str(out_path))
-        log.info(f"  Saved: {out_path}")
-        results[pt] = idata
+            with model:
+                idata = pm.sample(
+                    draws=DRAWS_BIVARIATE,
+                    tune=TUNE_BIVARIATE,
+                    target_accept=TARGET_ACCEPT_BIVARIATE,
+                    chains=CHAINS,
+                    progressbar=True,
+                    nuts_sampler_kwargs=NUTS_KWARGS_BIVARIATE,
+                    **sampler_kwargs,
+                )
 
-        summary = az.summary(
-            idata,
-            var_names=[
+            out_path = MASTER_DATA_DIR / f"bivariate_{experiment}_{pt}.nc"
+            idata.to_netcdf(str(out_path))
+            log.info(f"  Saved: {out_path}")
+            
+            key = f"{experiment}_{pt}"
+            results[key] = idata
+
+            var_names = [
                 "b1_velo",
                 "b2_velo",
                 "b1_spin",
                 "b2_spin",
-                "peak_age_velo",
-                "peak_age_spin",
-            ],
-        )
-        log.info("\n" + summary.to_string())
+            ]
+            if experiment == "with_ext":
+                var_names += ["b_ext_velo", "b_ext_spin"]
+                
+            summary = az.summary(idata, var_names=var_names)
+            log.info("\n" + summary.to_string())
 
-        rho = idata.posterior["chol_corr"].values[:, :, 0, 1].flatten()
-        log.info(
-            f"\n  Velo/spin random effect correlation:\n"
-            f"  mean={rho.mean():.3f}  "
-            f"95% HDI=[{np.percentile(rho, 2.5):.3f}, {np.percentile(rho, 97.5):.3f}]"
-        )
+            rho = idata.posterior["chol_corr"].values[:, :, 0, 1].flatten()
+            log.info(
+                f"\n  Velo/spin random effect correlation:\n"
+                f"  mean={rho.mean():.3f}  "
+                f"95% HDI=[{np.percentile(rho, 2.5):.3f}, {np.percentile(rho, 97.5):.3f}]"
+            )
 
-    converged = {pt: idata for pt, idata in results.items()}
+    # Use 'base' runs for correlation summary plots
+    converged = {pt: idata for key, idata in results.items() if key.startswith("base_") for pt in [key.split("_")[1]]}
     if converged:
         try:
             results_df = pd.read_csv(MASTER_DATA_DIR / "model_results.csv")

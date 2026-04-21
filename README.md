@@ -12,10 +12,11 @@ This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate,
 
 **Key findings:**
 - Velocity peaks early and declines thereafter (−0.13 to −0.26 mph/yr depending on pitch type)
-- Spin peaks later than velocity (ages 25–32), hypothesizing a potential compensatory mechanism as pitchers age
-- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.5 to +8.3 years). Extremely large gaps highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
-- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), aligning with known biomechanics that harder throwers naturally spin the ball more
-- Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries so used mixed-effects models to correct for this
+- Spin peaks later than velocity (ages 25–32), suggesting a possible compensatory mechanism as pitchers age
+- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.5 to +8.3 years). Large gaps can highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
+- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), aligning with biomechanics indicating that harder throwers tend to spin the ball more
+- Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries; mixed-effects models were employed to partially correct for this
+- *Note:* Spin axis analyses were explicitly removed from this study, as standard arithmetic models are systematically inappropriate for bounded circular directional data.
 
 ---
 
@@ -113,11 +114,11 @@ v_t ~ N(0, σ²_v)   (year random intercept)
 ε_it ~ StudentT(ν, 0, σ)
 ```
 
-- One model per pitch type × outcome (6 × 6 = 36 base, 36 with_ext = 72 combinations)
+- One model per pitch type × outcome (5 base outcomes and 5 with_ext outcomes, spin axis excluded)
 - `age_c = age − 28.89` (centered at sample mean)
-- Year random intercept absorbs secular trends including 2021 foreign substance crackdown
-- `with_ext` experiment adds `mean_ext` (release extension) as a fixed covariate
-- Two-pass screening: 500-draw screen pass to check significance, 2000-draw full fit only if significant
+- Year random intercept absorbs secular trends across pitching eras
+- `with_ext` experiment adds `mean_ext_c` (release extension, centered at sample mean) as a fixed covariate
+- Two-pass screening: 500-draw screen pass to check significance, 2000-draw full fit only if confidence is present
 - Linear fallback if `age_c_sq` 95% HDI spans zero and LOO favors the linear model
 
 Priors (weakly informative, scaled to each outcome's SD):
@@ -132,7 +133,7 @@ Priors (weakly informative, scaled to each outcome's SD):
 
 ### Peak Age Estimation (Cauchy-Ratio Correction)
 
-Peak ages are derived directly from the MCMC posterior samples via the quadratic vertex `(-β₁ / 2β₂)`. Because the ratio of two normally distributed parameters fundamentally resembles a heavy-tailed Cauchy distribution, taking an arithmetic mean is mathematically unstable. To guarantee statistically sound point estimates, we explicitly evaluate the **posterior median** over the entirely unbounded posterior distribution. This correctly grounds the final estimate and averts artificial truncation bias.
+Peak ages are derived directly from the MCMC posterior samples via the quadratic vertex `(-β₁ / 2β₂)`. Because the ratio of two normally distributed parameters fundamentally resembles a heavy-tailed Cauchy distribution, taking an arithmetic mean is mathematically unstable. To guarantee statistically sound point estimates, we explicitly evaluate the **posterior median** over the entirely unbounded posterior distribution. This correctly grounds the final estimate and helps avert artificial truncation bias.
 
 ### Bivariate — PyMC
 
