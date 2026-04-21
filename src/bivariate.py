@@ -42,11 +42,10 @@ def prepare_bivariate_data(
         .dropna(subset=required)
         .copy()
     )
-    # Re-center extension on this pitch type's mean (not global mean)
+    pt_df = filter_pitchers_by_min_distinct_seasons(pt_df, MIN_SEASONS)
+    # Re-center extension on the final analysis sample so mean(ext_c)=0 after filtering
     if "mean_ext" in pt_df.columns:
         pt_df["mean_ext_c"] = pt_df["mean_ext"] - pt_df["mean_ext"].mean()
-
-    pt_df = filter_pitchers_by_min_distinct_seasons(pt_df, MIN_SEASONS)
 
     pitchers = pt_df["pitcher"].unique()
     pitcher_idx = {pid: i for i, pid in enumerate(pitchers)}
@@ -188,10 +187,11 @@ if __name__ == "__main__":
             log.info("\n" + summary.to_string())
 
             rho = idata.posterior["chol_corr"].values[:, :, 0, 1].flatten()
+            rho_hdi = az.hdi(rho, hdi_prob=0.95)
             log.info(
                 f"\n  Velo/spin random effect correlation:\n"
                 f"  mean={rho.mean():.3f}  "
-                f"95% HDI=[{np.percentile(rho, 2.5):.3f}, {np.percentile(rho, 97.5):.3f}]"
+                f"95% HDI=[{float(rho_hdi[0]):.3f}, {float(rho_hdi[1]):.3f}]"
             )
 
     # Use 'base' runs for correlation summary plots

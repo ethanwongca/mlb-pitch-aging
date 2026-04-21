@@ -110,22 +110,23 @@ python src/tables.py
 ```
 y_it = β₀ + β₁·age_c + β₂·age_c² + u_i + v_t + ε_it
 u_i ~ N(0, σ²_u)   (pitcher random intercept)
-v_t ~ N(0, σ²_v)   (year random intercept)
+v_t ~ N(0, σ²_v)   (year random intercept — partial pooling over seasons)
 ε_it ~ StudentT(ν, 0, σ)
 ```
 
 - One model per pitch type × outcome (5 base outcomes and 5 with_ext outcomes, spin axis excluded)
-- `age_c = age − 28.89` (centered at sample mean)
-- Year random intercept absorbs secular trends across pitching eras
-- `with_ext` experiment adds `mean_ext_c` (release extension, centered at sample mean) as a fixed covariate
-- Two-pass screening: 500-draw screen pass to check significance, 2000-draw full fit only if confidence is present
-- Linear fallback if `age_c_sq` 95% HDI spans zero and LOO favors the linear model
+- `age_c = age − mean(age)` (centered at the global sample mean, ≈28.9)
+- Year random intercept absorbs secular trends across pitching eras (e.g., the 2021 sticky-stuff crackdown)
+- `with_ext` experiment adds `mean_ext_c` as a fixed covariate. Extension is re-centered **per pitch type on the final analysis sample** (after the minimum-seasons filter), so `mean(mean_ext_c) = 0` in the exact data fed to each model. The base and with_ext models are fitted on independent samples: the base model does not require extension to be non-missing, preventing selection bias.
+- Two-pass screening: 500-draw screen pass to check significance; 2000-draw full fit only if any age coefficient's 95% HDI excludes zero
+- Linear fallback: if the `age_c_sq` 95% HDI spans zero, a linear model is also fitted and PSIS-LOO is compared. The linear model is selected only if its ELPD-LOO exceeds the quadratic by more than 4 units; otherwise the quadratic is retained.
 
 Priors (weakly informative, scaled to each outcome's SD):
 ```
 β₀         ~ N(ȳ, 2·SD(y))
 β₁         ~ N(0, SD(y)/4)
 β₂         ~ N(0, SD(y)/2)
+β_ext      ~ N(0, SD(y))          [with_ext experiment only]
 σ_u, σ_v   ~ HalfNormal(SD(y))
 σ          ~ HalfNormal(SD(y))
 ν          ~ Gamma(2, 0.1)
@@ -133,19 +134,37 @@ Priors (weakly informative, scaled to each outcome's SD):
 
 ### Peak Age Estimation (Cauchy-Ratio Correction)
 
-Peak ages are derived directly from the MCMC posterior samples via the quadratic vertex `(-β₁ / 2β₂)`. Because the ratio of two normally distributed parameters fundamentally resembles a heavy-tailed Cauchy distribution, taking an arithmetic mean is mathematically unstable. To guarantee statistically sound point estimates, we explicitly evaluate the **posterior median** over the entirely unbounded posterior distribution. This correctly grounds the final estimate and helps avert artificial truncation bias.
+Peak ages are derived directly from the MCMC posterior samples via the quadratic vertex formula:
+
+```
+peak_age = age_mean + (−β₁ / 2β₂)
+```
+
+Because `−β₁ / (2β₂)` is a ratio of two approximately normal quantities, its distribution is heavy-tailed (Cauchy-like) when β₂ is near zero or has mixed sign. To produce valid estimates:
+
+1. Only draws where `β₂ < 0` are used (physical requirement for a maximum, not a minimum)
+2. Computed peak ages are restricted to the plausible range [15, 50]
+3. At least 100 filtered draws are required; otherwise no peak age is reported
+4. The **posterior median** is reported (not the mean), since the mean is undefined or unstable for Cauchy-like distributions
 
 ### Bivariate — PyMC
 
-Joint model for velocity and spin rate (FF and SI only):
+Joint model for velocity and spin rate (FF and SI only). Velo and spin are modeled as **independent Student-t observations**, but their pitcher-level random intercepts are jointly modeled via a correlated bivariate structure:
 
 ```
-[velo, spin] ~ MVN(μ, Σ)
-Σ = diag(σ) @ Corr @ diag(σ)
+velo_obs_it ~ StudentT(ν_velo, μ_velo_it, σ_velo)
+spin_obs_it ~ StudentT(ν_spin, μ_spin_it, σ_spin)
+
+μ_velo_it = β₀_velo + u_i[0] + v_t[0] + β₁_velo·age_c + β₂_velo·age_c²
+μ_spin_it = β₀_spin + u_i[1] + v_t[1] + β₁_spin·age_c + β₂_spin·age_c²
+
+[u_i[0], u_i[1]] ~ MVN(0, Σ_pitcher)   (LKJ Cholesky, non-centered)
+[v_t[0], v_t[1]] ~ MVN(0, Σ_year)      (LKJ Cholesky, non-centered)
 ```
 
-Estimates pitcher-level correlation ρ between velocity and spin random effects
-via LKJ Cholesky parameterization with non-centered random effects.
+The off-diagonal element of `Σ_pitcher` is the pitcher-level velocity/spin correlation ρ, estimated via the LKJ prior (`η=2`). Non-centered parameterization (`z ~ N(0,1)`, `u = z @ chol.T`) is used to avoid funnel geometry. Year random effects are also correlated across outcomes.
+
+Both outcomes use `ν ~ Gamma(2, 0.1)` for robustness to outlier pitcher-seasons, matching the univariate model's StudentT likelihood.
 
 ---
 
@@ -156,8 +175,7 @@ via LKJ Cholesky parameterization with non-centered random effects.
 SCG = spin_peak_age − velocity_peak_age
 ```
 Measures the career window where spin continues developing despite velocity decline.
-Positive SCG = active compensation mechanism. Bivariate estimates used for FF and SI;
-univariate for remaining pitch types.
+Positive SCG = active compensation mechanism. Bivariate peak ages are derived from joint posterior samples (draws where both β₂_velo < 0 and β₂_spin < 0), preserving their correlation. SCG point estimates use the posterior median; 95% HDI computed via ArviZ.
 
 ---
 

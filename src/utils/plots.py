@@ -1080,7 +1080,7 @@ def plot_scg_comparison(
     ax.set_xlim(x_min, x_max)
 
     legend_handles = [
-        Line2D([0], [0], color="gray", lw=6, alpha=0.80, label="Bivariate (★ = posterior mean, whiskers = 95% HDI)"),
+        Line2D([0], [0], color="gray", lw=6, alpha=0.80, label="Bivariate (★ = posterior median, whiskers = 95% HDI)"),
         Line2D([0], [0], color="gray", lw=6, alpha=0.35, label="Univariate"),
     ]
     ax.legend(handles=legend_handles, fontsize=8.5, frameon=False, loc="upper right")

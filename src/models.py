@@ -11,7 +11,9 @@ Model:
 
 Priors (weakly informative, scaled to outcome):
     β₀         ~ N(ȳ, 2·SD(y))
-    β₁, β₂     ~ N(0, SD(y))
+    β₁         ~ N(0, SD(y)/4)
+    β₂         ~ N(0, SD(y)/2)
+    β_ext      ~ N(0, SD(y))          [with_ext experiment only]
     σ_u        ~ HalfNormal(SD(y))
     σ_v        ~ HalfNormal(SD(y))
     σ          ~ HalfNormal(SD(y))
@@ -92,7 +94,7 @@ def build_bambi_formula(outcome: str, experiment: str, quadratic: bool = True) -
 
 
 def build_bambi_priors(
-    outcome: str, data: pd.DataFrame, quadratic: bool = True
+    outcome: str, data: pd.DataFrame, quadratic: bool = True, experiment: str = "base"
 ) -> dict:
     y_sd = float(data[outcome].std())
     priors = {
@@ -111,6 +113,9 @@ def build_bambi_priors(
     }
     if quadratic:
         priors["age_c_sq"] = bmb.Prior("Normal", mu=0, sigma=y_sd / 2)
+    if experiment == "with_ext":
+        # N(0, y_sd): allows effect up to ~±1 SD(y) per foot of extension
+        priors["mean_ext_c"] = bmb.Prior("Normal", mu=0, sigma=y_sd)
     return priors
 
 
@@ -125,7 +130,7 @@ def fit_bambi_model(
     tune = TUNE_FULL if full_inference else TUNE_SCREEN
     target_accept = TARGET_ACCEPT_FULL if full_inference else TARGET_ACCEPT_SCREEN
     formula = build_bambi_formula(outcome, experiment, quadratic=quadratic)
-    priors = build_bambi_priors(outcome, data, quadratic=quadratic)
+    priors = build_bambi_priors(outcome, data, quadratic=quadratic, experiment=experiment)
     model = bmb.Model(formula, data, family="t", priors=priors)
     fit_kwargs = dict(
         draws=draws,
@@ -380,12 +385,12 @@ if __name__ == "__main__":
                 if experiment == "with_ext":
                     required.append("mean_ext_c")
                 model_df = pt_df.dropna(subset=required).copy()
-                # Re-center extension on this pitch type's mean (not global mean)
-                if experiment == "with_ext" and "mean_ext" in model_df.columns:
-                    model_df["mean_ext_c"] = model_df["mean_ext"] - model_df["mean_ext"].mean()
                 model_df = filter_pitchers_by_min_distinct_seasons(
                     model_df, MIN_SEASONS_PER_PITCHER
                 )
+                # Re-center extension on the final analysis sample so mean(ext_c)=0 after filtering
+                if experiment == "with_ext" and "mean_ext" in model_df.columns:
+                    model_df["mean_ext_c"] = model_df["mean_ext"] - model_df["mean_ext"].mean()
 
                 if len(model_df) < 50:
                     log.warning(
