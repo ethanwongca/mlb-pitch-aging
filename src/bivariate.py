@@ -30,14 +30,21 @@ NUTS_KWARGS_BIVARIATE = {"max_treedepth": 12}
 def prepare_bivariate_data(
     df: pd.DataFrame,
     pitch_type: str,
+    experiment: str = "base",
     outcome_velo: str = "mean_velo",
     outcome_spin: str = "mean_spin_rate",
 ) -> dict:
+    required = [outcome_velo, outcome_spin, "age_c", "age_c_sq"]
+    if experiment == "with_ext":
+        required.append("mean_ext_c")
     pt_df = (
         df[df["pitch_type"] == pitch_type]
-        .dropna(subset=[outcome_velo, outcome_spin, "age_c", "age_c_sq", "mean_ext_c"])
+        .dropna(subset=required)
         .copy()
     )
+    # Re-center extension on this pitch type's mean (not global mean)
+    if "mean_ext" in pt_df.columns:
+        pt_df["mean_ext_c"] = pt_df["mean_ext"] - pt_df["mean_ext"].mean()
 
     pt_df = filter_pitchers_by_min_distinct_seasons(pt_df, MIN_SEASONS)
 
@@ -57,7 +64,7 @@ def prepare_bivariate_data(
         "year_idx": pt_df["year_idx"].values,
         "age_c": pt_df["age_c"].values,
         "age_c_sq": pt_df["age_c_sq"].values,
-        "mean_ext_c": pt_df["mean_ext_c"].values,
+        "mean_ext_c": pt_df["mean_ext_c"].values if "mean_ext_c" in pt_df.columns else np.zeros(len(pt_df)),
         "velo": pt_df[outcome_velo].values,
         "spin": pt_df[outcome_spin].values,
         "n_pitchers": len(pitchers),
@@ -113,9 +120,11 @@ def build_bivariate_model(data: dict, age_mean: float, experiment: str = "base")
 
         sigma_velo = pm.HalfNormal("sigma_velo", sigma=velo_sd)
         sigma_spin = pm.HalfNormal("sigma_spin", sigma=spin_sd)
+        nu_velo = pm.Gamma("nu_velo", alpha=2, beta=0.1)
+        nu_spin = pm.Gamma("nu_spin", alpha=2, beta=0.1)
 
-        pm.Normal("velo_obs", mu=mu_velo, sigma=sigma_velo, observed=data["velo"])
-        pm.Normal("spin_obs", mu=mu_spin, sigma=sigma_spin, observed=data["spin"])
+        pm.StudentT("velo_obs", nu=nu_velo, mu=mu_velo, sigma=sigma_velo, observed=data["velo"])
+        pm.StudentT("spin_obs", nu=nu_spin, mu=mu_spin, sigma=sigma_spin, observed=data["spin"])
 
     return model
 
@@ -141,7 +150,7 @@ if __name__ == "__main__":
             log.info(f"\n{'=' * 50}")
             log.info(f"Bivariate model: {pt} [{experiment}]")
 
-            data = prepare_bivariate_data(df, pt)
+            data = prepare_bivariate_data(df, pt, experiment=experiment)
             log.info(f"  {data['n_obs']} obs, {data['n_pitchers']} pitchers")
 
             model = build_bivariate_model(data, age_mean, experiment=experiment)
@@ -169,6 +178,8 @@ if __name__ == "__main__":
                 "b2_velo",
                 "b1_spin",
                 "b2_spin",
+                "nu_velo",
+                "nu_spin",
             ]
             if experiment == "with_ext":
                 var_names += ["b_ext_velo", "b_ext_spin"]
@@ -190,7 +201,7 @@ if __name__ == "__main__":
             results_df = pd.read_csv(MASTER_DATA_DIR / "model_results.csv")
             PLOTS_DIR.mkdir(parents=True, exist_ok=True)
             plot_bivariate_correlation(converged, PLOTS_DIR)
-            plot_bivariate_peak_comparison(converged, results_df, PLOTS_DIR)
+            plot_bivariate_peak_comparison(converged, results_df, PLOTS_DIR, age_mean=age_mean)
             log.info(f"Saved plots to {PLOTS_DIR}")
         except Exception as e:
             log.error(f"Plot generation failed: {e}")

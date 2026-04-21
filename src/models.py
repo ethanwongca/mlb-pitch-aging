@@ -205,12 +205,16 @@ def fit_with_fallback(
 
         loo_quad = az.loo(idata_quad).elpd_loo
         loo_lin = az.loo(idata_lin).elpd_loo
+        loo_diff = loo_lin - loo_quad
 
-        if loo_lin > loo_quad:
+        if loo_diff > 4:
             log.info(
-                f"  Linear preferred by LOO (lin={loo_lin:.1f} vs quad={loo_quad:.1f})"
+                f"  Linear preferred by LOO (lin={loo_lin:.1f} vs quad={loo_quad:.1f}, diff={loo_diff:.1f})"
             )
             return idata_lin, True
+        log.info(
+            f"  Quadratic retained (LOO diff={loo_diff:.1f} ≤ 4 threshold)"
+        )
 
     return idata_quad, False
 
@@ -372,8 +376,13 @@ if __name__ == "__main__":
         for pitch_type, pt_df in pitch_type_dict.items():
             for outcome in OUTCOMES:
                 count += 1
-                required = [outcome, "age_c", "age_c_sq", "year", "pitcher", "mean_ext_c"]
+                required = [outcome, "age_c", "age_c_sq", "year", "pitcher"]
+                if experiment == "with_ext":
+                    required.append("mean_ext_c")
                 model_df = pt_df.dropna(subset=required).copy()
+                # Re-center extension on this pitch type's mean (not global mean)
+                if experiment == "with_ext" and "mean_ext" in model_df.columns:
+                    model_df["mean_ext_c"] = model_df["mean_ext"] - model_df["mean_ext"].mean()
                 model_df = filter_pitchers_by_min_distinct_seasons(
                     model_df, MIN_SEASONS_PER_PITCHER
                 )

@@ -891,10 +891,12 @@ def plot_bivariate_peak_comparison(
     results: dict,
     univariate_df: pd.DataFrame,
     out_dir: Path,
+    age_mean: float,
 ) -> None:
     """
     Side-by-side comparison of univariate vs bivariate peak age estimates.
     Bivariate posteriors shown as HDI bars; univariate as point + CI from delta method.
+    Peak ages are derived from b1/b2 posterior samples (not stored as deterministics).
     """
     import arviz as az
 
@@ -915,7 +917,8 @@ def plot_bivariate_peak_comparison(
         axes = [[ax] for ax in axes]
 
     for row_i, outcome in enumerate(outcomes):
-        var_name = "peak_age_velo" if outcome == "mean_velo" else "peak_age_spin"
+        b1_key = "b1_velo" if outcome == "mean_velo" else "b1_spin"
+        b2_key = "b2_velo" if outcome == "mean_velo" else "b2_spin"
         ylabel = OUTCOME_LABELS.get(outcome, outcome)
 
         for col_i, pt in enumerate(pitch_types):
@@ -923,10 +926,23 @@ def plot_bivariate_peak_comparison(
             idata = results[pt]
             color = PITCH_COLORS.get(pt, "steelblue")
 
-            # Bivariate posterior
-            samples = idata.posterior[var_name].values.flatten()
+            # Compute peak ages from posterior: peak = age_mean - b1 / (2*b2), only where b2 < 0
+            b1 = idata.posterior[b1_key].values.flatten()
+            b2 = idata.posterior[b2_key].values.flatten()
+            mask = b2 < 0
+            peak_raw = age_mean + (-b1[mask] / (2 * b2[mask]))
+            samples = peak_raw[(peak_raw > 15) & (peak_raw < 50)]
+
+            if len(samples) < 100:
+                ax.set_title(
+                    f"{PITCH_LABELS.get(pt, pt)} — {ylabel}\n(insufficient concave-down samples)",
+                    fontsize=9,
+                    color="gray",
+                )
+                continue
+
             hdi = az.hdi(samples, hdi_prob=0.95)
-            biv_mean = samples.mean()
+            biv_mean = float(np.median(samples))
 
             ax.hist(
                 samples,
@@ -957,8 +973,8 @@ def plot_bivariate_peak_comparison(
                     )
 
             ax.axvline(biv_mean, color=color, lw=1.8, zorder=3)
-            xlim = (25, 45) if outcome == "mean_spin_rate" else (20, 40)
-            ax.set_xlim(*xlim)
+            pad = max(1.5, 0.1 * (float(hdi[1]) - float(hdi[0])))
+            ax.set_xlim(float(hdi[0]) - pad, float(hdi[1]) + pad)
             ax.set_xlabel("Peak age (years)")
             ax.set_ylabel("Density" if col_i == 0 else "")
             ax.set_title(

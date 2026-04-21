@@ -16,12 +16,12 @@ MASTER_DATA_DIR = BASE_DIR / "master_data"
 PLOTS_DIR = BASE_DIR / "eda_plots"
 
 METRICS = [
-    ("mean_velo", "std_velo", "Velocity (mph)", "Mean Velocity"),
-    ("mean_spin_rate", "std_spin_rate", "Spin Rate (rpm)", "Mean Spin Rate"),
-    ("mean_pfx_x", "std_pfx_x", "Horizontal Break (ft)", "Mean H-Break"),
-    ("mean_pfx_z", "std_pfx_z", "Vertical Break (ft)", "Mean V-Break"),
-    ("mean_ext", "std_ext", "Extension (ft)", "Mean Extension"),
-    ("mean_eff_speed", "std_eff_speed", "Eff. Speed (mph)", "Mean Eff. Speed"),
+    ("mean_velo", "Velocity (mph)", "Mean Velocity"),
+    ("mean_spin_rate", "Spin Rate (rpm)", "Mean Spin Rate"),
+    ("mean_pfx_x", "Horizontal Break (ft)", "Mean H-Break"),
+    ("mean_pfx_z", "Vertical Break (ft)", "Mean V-Break"),
+    ("mean_ext", "Extension (ft)", "Mean Extension"),
+    ("mean_eff_speed", "Eff. Speed (mph)", "Mean Eff. Speed"),
 ]
 
 
@@ -31,7 +31,7 @@ def save_plot(title, suffix):
     print(f"Saved {filename}")
 
 
-def plot_by_age(df, metric, std_col, ylabel, title):
+def plot_by_age(df, metric, ylabel, title):
     _, axes = plt.subplots(2, 3, figsize=(16, 8))
     for ax, pt in zip(axes.flatten(), VALID_PITCH_TYPES):
         agg = (
@@ -80,8 +80,8 @@ if __name__ == "__main__":
     df = df.drop(columns=["age_c", "age_c_sq"], errors="ignore")
     df = df[df["pitch_type"].isin(VALID_PITCH_TYPES)]
 
-    for metric, std_col, ylabel, title in METRICS:
-        plot_by_age(df, metric, std_col, ylabel, title)
+    for metric, ylabel, title in METRICS:
+        plot_by_age(df, metric, ylabel, title)
         plot_by_year(df, metric, ylabel, title)
 
 
