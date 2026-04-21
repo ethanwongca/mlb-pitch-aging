@@ -18,8 +18,8 @@ Priors (weakly informative, scaled to outcome):
     ν          ~ Gamma(2, 0.1)
 
 Two-pass screening:
-    Screen pass (300 draws): fit fast, check significance.
-    Full pass (2000 draws): only if screen shows any HDI excludes zero.
+    Screen pass (500 draws + 500 tune): fit fast, check significance.
+    Full pass (2000 draws + 4000 tune): only if screen shows any HDI excludes zero.
 
 Outputs:
     master_data/model_results.csv        ← posterior summaries
@@ -173,7 +173,7 @@ def fit_with_fallback(
     experiment: str,
     log,
 ) -> tuple[az.InferenceData, bool] | None:
-    """Two-pass: screen (300 draws) → full (2000 draws) only if significant.
+    """Two-pass: screen (500 draws) → full (2000 draws) only if significant.
     Returns None if screen finds no significant age effect.
     Returns (idata, is_linear) otherwise.
     """

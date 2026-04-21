@@ -119,7 +119,7 @@ def build_table_s3(decline_base: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def build_table_s5(scg_df: pd.DataFrame) -> pd.DataFrame:
+def build_table_s4(scg_df: pd.DataFrame) -> pd.DataFrame:
     """SCG summary by pitch type."""
     t = scg_df[["pitch_type", "velo_peak_age", "velo_hdi_lo", "velo_hdi_hi",
                  "spin_peak_age", "spin_hdi_lo", "spin_hdi_hi", "scg"]].copy()
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     save(build_table_s1(results_df, peak_base, decline_base), "table_s1_model_results")
     save(build_table_s2(peak_base, peak_ext), "table_s2_peak_age_cis")
     save(build_table_s3(decline_base), "table_s3_decline_rate_cis")
-    save(build_table_s5(scg_df), "table_s4_scg_summary")
+    save(build_table_s4(scg_df), "table_s4_scg_summary")
 
     print("\nGenerating main paper tables...")
     save(build_table1(decline_base), "table1_velo_decline_rates")

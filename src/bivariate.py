@@ -58,7 +58,7 @@ def prepare_bivariate_data(
     }
 
 
-def build_bivariate_model(data: dict) -> pm.Model:
+def build_bivariate_model(data: dict, age_mean: float) -> pm.Model:
     with pm.Model() as model:
         b0_velo = pm.Normal("b0_velo", mu=data["velo"].mean(), sigma=5)
         b1_velo = pm.Normal("b1_velo", mu=0, sigma=1)
@@ -90,9 +90,8 @@ def build_bivariate_model(data: dict) -> pm.Model:
         pm.Normal("velo_obs", mu=mu_velo, sigma=sigma_velo, observed=data["velo"])
         pm.Normal("spin_obs", mu=mu_spin, sigma=sigma_spin, observed=data["spin"])
 
-        age_mean_val = float(data["df"]["age"].mean())
-        pm.Deterministic("peak_age_velo", age_mean_val + (-b1_velo / (2 * b2_velo)))
-        pm.Deterministic("peak_age_spin", age_mean_val + (-b1_spin / (2 * b2_spin)))
+        pm.Deterministic("peak_age_velo", age_mean + (-b1_velo / (2 * b2_velo)))
+        pm.Deterministic("peak_age_spin", age_mean + (-b1_spin / (2 * b2_spin)))
 
     return model
 
@@ -118,7 +117,7 @@ if __name__ == "__main__":
         data = prepare_bivariate_data(df, pt)
         log.info(f"  {data['n_obs']} obs, {data['n_pitchers']} pitchers")
 
-        model = build_bivariate_model(data)
+        model = build_bivariate_model(data, age_mean)
 
         with model:
             idata = pm.sample(

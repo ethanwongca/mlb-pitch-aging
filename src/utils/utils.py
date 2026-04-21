@@ -34,6 +34,7 @@ PITCH_LABELS = {
 OUTCOME_LABELS = {
     "mean_velo": "Velocity (mph)",
     "mean_spin_rate": "Spin Rate (rpm)",
+    "mean_pfx_x": "Horizontal Break (ft)",
     "mean_pfx_x_norm": "Horizontal Break, norm (ft)",
     "mean_pfx_z": "Vertical Break (ft)",
     "mean_spin_axis": "Spin Axis (°)",

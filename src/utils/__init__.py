@@ -16,7 +16,6 @@ from .utils import load_data
 from .utils import setup_logger
 from .sampling import get_bambi_sampler_kwargs
 from .sampling import get_pymc_sampler_kwargs
-from .inference import check_convergence
 from .plots import plot_aging_curves_grid
 from .plots import plot_decline_rate_ci
 from .plots import plot_delta_method_comparison
@@ -49,7 +48,6 @@ __all__ = [
     "setup_logger",
     "get_bambi_sampler_kwargs",
     "get_pymc_sampler_kwargs",
-    "check_convergence",
     "plot_aging_curves_grid",
     "plot_decline_rate_ci",
     "plot_delta_method_comparison",
