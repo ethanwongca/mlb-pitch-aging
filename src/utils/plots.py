@@ -433,6 +433,77 @@ def plot_ext_loo_heatmap(
     print(f"  Saved: {fname.name}")
 
 
+def plot_pareto_k_heatmap(
+    results_df: pd.DataFrame,
+    out_dir: Path,
+    experiment: str = "base",
+    threshold: float = 0.7,
+) -> None:
+    """
+    Heatmap of % observations with Pareto k > threshold per pitch type × outcome.
+    Highlights models where PSIS-LOO importance sampling is unreliable.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    df = results_df[results_df["experiment"] == experiment].copy()
+    if "pct_high_pareto_k" not in df.columns or df["pct_high_pareto_k"].isna().all():
+        print(f"  Skipping Pareto k heatmap — no pct_high_pareto_k data for {experiment}")
+        return
+
+    pivot = df.pivot_table(
+        index="pitch_type", columns="outcome", values="pct_high_pareto_k"
+    ) * 100  # convert to percent
+
+    pt_order = ["FF", "SL", "SI", "CH", "CU", "FC"]
+    oc_order = [
+        o
+        for o in [
+            "mean_velo",
+            "mean_spin_rate",
+            "mean_pfx_z",
+            "mean_pfx_x_norm",
+            "mean_pfx_x",
+            "mean_spin_axis",
+        ]
+        if o in pivot.columns
+    ]
+    pivot = pivot.reindex(index=pt_order, columns=oc_order)
+    col_labels = [OUTCOME_LABELS.get(c, c) for c in pivot.columns]
+    row_labels = [PITCH_LABELS.get(r, r) for r in pivot.index]
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    sns.heatmap(
+        pivot,
+        ax=ax,
+        annot=True,
+        fmt=".1f",
+        cmap="YlOrRd",
+        vmin=0,
+        linewidths=0.5,
+        linecolor="white",
+        xticklabels=col_labels,
+        yticklabels=row_labels,
+        cbar_kws={"label": f"% obs with Pareto k > {threshold}", "shrink": 0.8},
+    )
+    ax.set_title(
+        f"PSIS-LOO Reliability — % Observations with Pareto k > {threshold} ({experiment})",
+        fontsize=12,
+        fontweight="bold",
+        pad=12,
+    )
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.tick_params(axis="x", rotation=30)
+    ax.tick_params(axis="y", rotation=0)
+
+    fig.tight_layout()
+    fname = out_dir / f"pareto_k_heatmap_{experiment}.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
 def plot_peak_age_ci(
     ci_df: pd.DataFrame,
     out_dir: Path,

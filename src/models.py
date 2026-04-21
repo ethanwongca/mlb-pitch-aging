@@ -4,16 +4,18 @@ Univariate Bayesian mixed effects models for MLB pitch aging study.
 Replaces statsmodels REML with full Bayesian inference via bambi/PyMC.
 
 Model:
-    y_it = β₀ + β₁·age_c + β₂·age_c² + Σγ_k·I(year=k) + u_i + ε_it
-    u_i ~ N(0, σ²_u)
-    ε_it ~ N(0, σ²)
+    y_it = β₀ + β₁·age_c + β₂·age_c² + u_i + v_t + ε_it
+    u_i ~ N(0, σ²_u)   (pitcher random intercept)
+    v_t ~ N(0, σ²_v)   (year random intercept — partial pooling over seasons)
+    ε_it ~ StudentT(ν, 0, σ)
 
 Priors (weakly informative, scaled to outcome):
     β₀         ~ N(ȳ, 2·SD(y))
     β₁, β₂     ~ N(0, SD(y))
-    γ_k (year) ~ bambi defaults (Normal)
     σ_u        ~ HalfNormal(SD(y))
+    σ_v        ~ HalfNormal(SD(y))
     σ          ~ HalfNormal(SD(y))
+    ν          ~ Gamma(2, 0.1)
 
 Two-pass screening:
     Screen pass (300 draws): fit fast, check significance.
@@ -50,6 +52,7 @@ from utils.plots import (
     plot_aging_curves_grid,
     plot_delta_method_comparison,
     plot_ext_loo_heatmap,
+    plot_pareto_k_heatmap,
     plot_spaghetti,
     plot_spin_velo_divergence,
     plot_survivorship_bias,
@@ -68,7 +71,7 @@ DRAWS_FULL = 2000
 TUNE_FULL = 4000
 CHAINS = 4
 TARGET_ACCEPT_SCREEN = 0.9
-TARGET_ACCEPT_FULL = 0.99
+TARGET_ACCEPT_FULL = 0.9
 NUTS_KWARGS = {"max_treedepth": 14}
 MIN_SEASONS_PER_PITCHER = 3
 
@@ -80,28 +83,31 @@ SAMPLER_KWARGS = get_bambi_sampler_kwargs(CHAINS)
 
 def build_bambi_formula(outcome: str, experiment: str, quadratic: bool = True) -> str:
     """Build bambi lme4-style formula."""
-    fixed = f"{outcome} ~ age_c + C(year)"
+    fixed = f"{outcome} ~ age_c"
     if quadratic:
-        fixed = f"{outcome} ~ age_c + age_c_sq + C(year)"
+        fixed = f"{outcome} ~ age_c + age_c_sq"
     if experiment == "with_ext":
         fixed += " + mean_ext"
-    return fixed + " + (1|pitcher)"
+    return fixed + " + (1|pitcher) + (1|year)"
 
 
 def build_bambi_priors(
     outcome: str, data: pd.DataFrame, quadratic: bool = True
 ) -> dict:
-    """Weakly informative priors scaled to outcome SD."""
     y_sd = float(data[outcome].std())
     priors = {
         "Intercept": bmb.Prior(
             "Normal", mu=float(data[outcome].mean()), sigma=2 * y_sd
         ),
-        "age_c": bmb.Prior("Normal", mu=0, sigma=y_sd),
+        "age_c": bmb.Prior("Normal", mu=0, sigma=y_sd / 4),
         "1|pitcher": bmb.Prior(
             "Normal", mu=0, sigma=bmb.Prior("HalfNormal", sigma=y_sd)
         ),
         "sigma": bmb.Prior("HalfNormal", sigma=y_sd),
+        "1|year": bmb.Prior(
+            "Normal", mu=0, sigma=bmb.Prior("HalfNormal", sigma=y_sd)
+        ),
+        "nu": bmb.Prior("Gamma", alpha=2, beta=0.1),
     }
     if quadratic:
         priors["age_c_sq"] = bmb.Prior("Normal", mu=0, sigma=y_sd / 2)
@@ -120,7 +126,7 @@ def fit_bambi_model(
     target_accept = TARGET_ACCEPT_FULL if full_inference else TARGET_ACCEPT_SCREEN
     formula = build_bambi_formula(outcome, experiment, quadratic=quadratic)
     priors = build_bambi_priors(outcome, data, quadratic=quadratic)
-    model = bmb.Model(formula, data, family="gaussian", priors=priors)
+    model = bmb.Model(formula, data, family="t", priors=priors)
     fit_kwargs = dict(
         draws=draws,
         tune=tune,
@@ -147,6 +153,20 @@ def _screen_is_significant(idata: az.InferenceData) -> bool:
     return False
 
 
+def _log_rhat_diagnostics(idata: az.InferenceData, log, label: str = "") -> None:
+    """Log any parameters with R-hat > 1.01 to help diagnose convergence failures."""
+    try:
+        check_vars = [v for v in ["age_c", "age_c_sq", "1|pitcher_sigma", "1|year_sigma"] if v in idata.posterior]
+        summary = az.summary(idata, var_names=check_vars)
+        bad = summary[summary["r_hat"] > 1.01][["mean", "sd", "r_hat", "ess_bulk"]]
+        if bad.empty:
+            log.info(f"  Rhat diagnostic{' ' + label if label else ''}: all params OK (≤1.01)")
+        else:
+            log.warning(f"  Rhat diagnostic{' ' + label if label else ''}: {len(bad)} params with Rhat>1.01\n{bad.to_string()}")
+    except Exception as e:
+        log.warning(f"  Rhat diagnostic failed: {e}")
+
+
 def fit_with_fallback(
     model_df: pd.DataFrame,
     outcome: str,
@@ -168,6 +188,7 @@ def fit_with_fallback(
     idata_quad = fit_bambi_model(
         model_df, outcome, experiment, quadratic=True, full_inference=True
     )
+    _log_rhat_diagnostics(idata_quad, log, label="(quadratic)")
 
     b2_samples = idata_quad.posterior["age_c_sq"].values.flatten()
     hdi_b2 = az.hdi(b2_samples, hdi_prob=0.95)
@@ -180,6 +201,7 @@ def fit_with_fallback(
         idata_lin = fit_bambi_model(
             model_df, outcome, experiment, quadratic=False, full_inference=True
         )
+        _log_rhat_diagnostics(idata_lin, log, label="(linear fallback)")
 
         loo_quad = az.loo(idata_quad).elpd_loo
         loo_lin = az.loo(idata_lin).elpd_loo
@@ -265,10 +287,17 @@ def extract_posterior_summaries(
     except (TypeError, AttributeError):
         sigma_u_mean = float("nan")
 
+    loo = float("nan")
+    n_high_pareto_k = None
+    pct_high_pareto_k = None
     try:
-        loo = float(az.loo(idata).elpd_loo)
+        loo_result = az.loo(idata)
+        loo = float(loo_result.elpd_loo)
+        k_vals = loo_result.pareto_k.values
+        n_high_pareto_k = int((k_vals > 0.7).sum())
+        pct_high_pareto_k = round(float(n_high_pareto_k / len(k_vals)), 4)
     except Exception:
-        loo = float("nan")
+        pass
 
     try:
         n_obs = int(idata.observed_data[outcome].size)
@@ -303,6 +332,8 @@ def extract_posterior_summaries(
         "decline_at_mean": b1_mean,
         "sigma_u_mean": sigma_u_mean,
         "loo": loo,
+        "n_high_pareto_k": n_high_pareto_k,
+        "pct_high_pareto_k": pct_high_pareto_k,
         "is_linear_model": is_linear,
         "n_obs": n_obs,
         "n_groups": n_groups,
@@ -389,12 +420,18 @@ if __name__ == "__main__":
                         if row["peak_age_mean"]
                         else "monotonic"
                     )
+                    n_k = row["n_high_pareto_k"] or 0
+                    pct_k = (row["pct_high_pareto_k"] or 0) * 100
+                    pareto_str = f"Pareto-k>0.7: {n_k} ({pct_k:.1f}%)"
                     log.info(
                         f"  → {peak_str} | "
                         f"{'sig' if row['significant'] else 'not sig'} | "
                         f"LOO={row['loo']:.1f} | "
+                        f"{pareto_str} | "
                         f"linear={'Y' if is_linear else 'N'}"
                     )
+                    if n_k > 0:
+                        log.warning(f"  !! {pareto_str} — {experiment} {pitch_type} {outcome}")
 
                 except Exception as e:
                     log.error(
@@ -450,6 +487,21 @@ if __name__ == "__main__":
             meaningful = loo_compare[loo_compare["delta"].abs() > 2][["delta"]]
             log.info("\nLOO delta >2 (positive = ext improves):\n" + meaningful.to_string())
 
+        # Pareto k > 0.7 summary across all models
+        k_df = results_df[results_df["n_high_pareto_k"].notna()].copy()
+        k_df["n_high_pareto_k"] = k_df["n_high_pareto_k"].astype(int)
+        flagged = k_df[k_df["n_high_pareto_k"] > 0].sort_values("n_high_pareto_k", ascending=False)
+        total_high_k = int(k_df["n_high_pareto_k"].sum())
+        log.info(f"\n{'='*50}")
+        log.info(f"Pareto k > 0.7 summary: {total_high_k} total bad obs across {len(flagged)} models")
+        if not flagged.empty:
+            log.info(
+                "\n"
+                + flagged[
+                    ["experiment", "pitch_type", "outcome", "n_high_pareto_k", "pct_high_pareto_k", "n_obs"]
+                ].to_string(index=False)
+            )
+
         # Plots — reload fitted_idatas from pkl (del'd above to free RAM during sampling)
         try:
             for experiment in EXPERIMENTS:
@@ -483,6 +535,8 @@ if __name__ == "__main__":
                 results_df, df, age_mean, PLOTS_DIR, experiment="base"
             )
             plot_ext_loo_heatmap(results_df, PLOTS_DIR)
+            for experiment in EXPERIMENTS:
+                plot_pareto_k_heatmap(results_df, PLOTS_DIR, experiment=experiment)
             plot_spaghetti(
                 results_df,
                 df,

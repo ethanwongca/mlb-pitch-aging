@@ -21,6 +21,7 @@ from .plots import plot_aging_curves_grid
 from .plots import plot_decline_rate_ci
 from .plots import plot_delta_method_comparison
 from .plots import plot_ext_loo_heatmap
+from .plots import plot_pareto_k_heatmap
 from .plots import plot_peak_age_ci
 from .plots import plot_bivariate_correlation
 from .plots import plot_bivariate_peak_comparison
@@ -53,6 +54,7 @@ __all__ = [
     "plot_decline_rate_ci",
     "plot_delta_method_comparison",
     "plot_ext_loo_heatmap",
+    "plot_pareto_k_heatmap",
     "plot_peak_age_ci",
     "plot_bivariate_correlation",
     "plot_bivariate_peak_comparison",
