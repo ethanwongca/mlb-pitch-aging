@@ -270,7 +270,7 @@ def extract_posterior_summaries(
             peak_samples = peak_samples_raw[(peak_samples_raw > 15) & (peak_samples_raw < 50)]
             if len(peak_samples) >= 100:
                 hdi_pa = az.hdi(peak_samples, hdi_prob=0.95)
-                peak_age_mean = round(peak_median_raw, 3)
+                peak_age_median = round(peak_median_raw, 3)
                 peak_age_lo = round(float(hdi_pa[0]), 3)
                 peak_age_hi = round(float(hdi_pa[1]), 3)
 
@@ -327,7 +327,7 @@ def extract_posterior_summaries(
         "b2_significant": b2_sig,
         "significant": b1_sig or b2_sig,
         "pct_b2_negative": pct_b2_negative,
-        "peak_age_median": peak_age_mean,
+        "peak_age_median": peak_age_median,
         "peak_age_hdi_lo": peak_age_lo,
         "peak_age_hdi_hi": peak_age_hi,
         "decline_at_mean": b1_mean,
@@ -416,7 +416,7 @@ if __name__ == "__main__":
                     idata.to_netcdf(str(IDATAS_DIR / f"{key}.nc"))
 
                     peak_str = (
-                        f"peak={row['peak_age_mean']:.1f} "
+                        f"peak={row['peak_age_median']:.1f} "
                         f"[{row['peak_age_hdi_lo']:.1f}, {row['peak_age_hdi_hi']:.1f}]"
                         if row["peak_age_median"]
                         else "monotonic"
