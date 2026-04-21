@@ -1179,6 +1179,100 @@ def plot_bivariate_peak_comparison(
     print(f"  Saved: {fname.name}")
 
 
+def plot_scg_comparison(
+    uni_scg_df: pd.DataFrame,
+    biv_scg_df: pd.DataFrame,
+    out_dir: Path,
+) -> None:
+    """
+    Grouped horizontal bar chart comparing univariate vs bivariate SCG per pitch type.
+    Bivariate bars include posterior HDI whiskers.
+    """
+    from matplotlib.lines import Line2D
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    biv = biv_scg_df.set_index("pitch_type")
+    uni = uni_scg_df.set_index("pitch_type")
+    pitch_types = biv.index.tolist()
+
+    # Sort by bivariate SCG ascending so largest gap is at top
+    pitch_types = sorted(pitch_types, key=lambda pt: biv.loc[pt, "scg"])
+
+    n = len(pitch_types)
+    fig, ax = plt.subplots(figsize=(9, max(3.5, 0.9 * n + 1.8)))
+
+    offset = 0.22
+    for i, pt in enumerate(pitch_types):
+        color = PITCH_COLORS.get(pt, "steelblue")
+
+        # Bivariate bar (bottom slot)
+        biv_scg = float(biv.loc[pt, "scg"])
+        biv_hdi_lo = float(biv.loc[pt, "scg_hdi_lo"])
+        biv_hdi_hi = float(biv.loc[pt, "scg_hdi_hi"])
+        bar_color = "#22c55e" if biv_scg >= 0 else "#ef4444"
+
+        ax.barh(i - offset, biv_scg, color=color, alpha=0.80, height=0.35, zorder=2)
+        ax.errorbar(
+            biv_scg, i - offset,
+            xerr=[[biv_scg - biv_hdi_lo], [biv_hdi_hi - biv_scg]],
+            fmt="none", color=color, elinewidth=1.8, capsize=4, zorder=3,
+        )
+        sign = "+" if biv_scg >= 0 else ""
+        # Place text below the bivariate bar, anchored right of the HDI upper bound
+        ax.text(
+            biv_hdi_hi + 0.25,
+            i - offset - 0.18,
+            f"{sign}{biv_scg:.1f} ★  [{biv_hdi_lo:.1f}, {biv_hdi_hi:.1f}]",
+            va="top", ha="left",
+            fontsize=8, color=color,
+        )
+
+        # Univariate bar (top slot)
+        if pt in uni.index:
+            uni_scg = float(uni.loc[pt, "scg"])
+            ax.barh(i + offset, uni_scg, color=color, alpha=0.35, height=0.35, zorder=2)
+            sign_u = "+" if uni_scg >= 0 else ""
+            ax.text(
+                max(uni_scg, 0) + 0.25 if uni_scg >= 0 else min(uni_scg, 0) - 0.25,
+                i + offset,
+                f"{sign_u}{uni_scg:.1f}",
+                va="center", ha="left" if uni_scg >= 0 else "right",
+                fontsize=8, color=color, alpha=0.7,
+            )
+
+    ax.axvline(0, color="#374151", lw=1.2, alpha=0.5)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([PITCH_LABELS.get(pt, pt) for pt in pitch_types])
+    ax.set_xlabel("Stuff Compensation Gap (spin peak age − velocity peak age, years)")
+    ax.set_title(
+        "Stuff Compensation Gap: Univariate vs Bivariate Estimates",
+        fontsize=12, fontweight="bold", pad=10,
+    )
+    ax.grid(axis="x", alpha=0.2, zorder=0)
+    ax.set_axisbelow(True)
+
+    all_scg = [float(biv.loc[pt, "scg"]) for pt in pitch_types]
+    if any(pt in uni.index for pt in pitch_types):
+        all_scg += [float(uni.loc[pt, "scg"]) for pt in pitch_types if pt in uni.index]
+    x_min = min(min(all_scg) - 1.5, -1)
+    x_max = max(all_scg) + 5
+    ax.set_xlim(x_min, x_max)
+
+    legend_handles = [
+        Line2D([0], [0], color="gray", lw=6, alpha=0.80, label="Bivariate (★ = posterior mean, whiskers = 95% HDI)"),
+        Line2D([0], [0], color="gray", lw=6, alpha=0.35, label="Univariate"),
+    ]
+    ax.legend(handles=legend_handles, fontsize=8.5, frameon=False, loc="upper right")
+
+    fig.tight_layout()
+    fname = out_dir / "scg_comparison.png"
+    fig.savefig(fname, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {fname.name}")
+
+
 def plot_scd_bars(
     scd_df: pd.DataFrame,
     outcome: str,

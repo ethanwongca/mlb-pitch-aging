@@ -26,6 +26,7 @@ from .plots import plot_peak_age_ci
 from .plots import plot_bivariate_correlation
 from .plots import plot_bivariate_peak_comparison
 from .plots import plot_scg_bars
+from .plots import plot_scg_comparison
 from .plots import plot_scg_dumbbell
 from .plots import plot_spin_velo_divergence
 from .plots import plot_spaghetti
@@ -58,6 +59,7 @@ __all__ = [
     "plot_bivariate_correlation",
     "plot_bivariate_peak_comparison",
     "plot_scg_bars",
+    "plot_scg_comparison",
     "plot_scg_dumbbell",
     "plot_spin_velo_divergence",
     "plot_survivorship_bias",

@@ -47,7 +47,6 @@ run_step "EDA Plots" "python src/eda_plots.py"
 
 run_step "Models" "python src/models.py"
 run_step "Inference" "python src/inference.py"
-run_step "SCG" "python src/scg.py"
 
 # Bivariate can be expensive and may already be done. Set RERUN_BIVARIATE=1 to force rerun.
 if [[ "${RERUN_BIVARIATE:-0}" == "1" ]]; then
@@ -55,7 +54,8 @@ if [[ "${RERUN_BIVARIATE:-0}" == "1" ]]; then
 else
   log "SKIP: Bivariate (set RERUN_BIVARIATE=1 to run)"
 fi
-
+ 
+run_step "SCG" "python src/scg.py"
 run_step "Tables" "python src/tables.py"
 
 log "Pipeline complete"
