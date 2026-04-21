@@ -37,7 +37,7 @@ def plot_by_age(df, metric, std_col, ylabel, title):
         agg = (
             df[df["pitch_type"] == pt]
             .groupby("age")
-            .agg(mean=(metric, "mean"), std=(std_col, "mean"), n=("pitcher", "count"))
+            .agg(mean=(metric, "mean"), std=(metric, "std"), n=("pitcher", "count"))
             .reset_index()
             .query("n >= 10")
         )
