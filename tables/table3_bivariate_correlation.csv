@@ -1,0 +1,3 @@
+pitch_type,rho_mean,hdi_lo_95,hdi_hi_95,n_posterior_samples
+FF,0.318,0.257,0.379,12000
+SI,0.338,0.263,0.415,12000

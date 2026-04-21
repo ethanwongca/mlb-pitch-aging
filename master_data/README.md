@@ -52,7 +52,7 @@ Spin axis data is unavailable prior to 2020. All values are NaN for 2015–2019.
 |--------|------|------|-------------|
 | `age` | int | years | Pitcher age at season midpoint — computed as `year - birthYear` from Lahman People.csv |
 | `age_sq` | int | years² | Age squared — `age²` |
-| `age_c` | float | years | Age centered at sample mean (~28) — `age - mean(age)`. Used as primary predictor in mixed effects models to improve numerical stability and interpretability |
+| `age_c` | float | years | Age centered at sample mean — `age - mean(age)`. Used as primary predictor in mixed effects models to improve numerical stability and interpretability |
 | `age_c_sq` | float | years² | Centered age squared — `age_c²`. Enables quadratic aging curve estimation |
 
 ## Notes

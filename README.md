@@ -12,10 +12,10 @@ This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate,
 
 **Key findings:**
 - Velocity declines monotonically throughout observable MLB careers (−0.13 to −0.26 mph/yr depending on pitch type)
-- Spin rate peaks mid-career (ages 25–32), *after* velocity has already begun declining — evidence of an active compensation mechanism
-- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age — ranges from −0.5 years (changeup) to +8.3 years (sinker, bivariate estimate)
+- Spin rate peaks mid-career (ages 25–32), *after* velocity has already begun declining showing evidence of an active compensation mechanism
+- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age which ranges from −0.5 years (changeup) to +8.3 years (sinker, bivariate estimate)
 - Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), indicating harder throwers naturally spin more
-- Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries; mixed-effects models correct for this
+- Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries so used mixed-effects models to correct for this
 
 ---
 
@@ -28,8 +28,6 @@ mlb-pitch-aging/
 ├── master_data/
 │   ├── pitching_master.csv               # full dataset with age
 │   ├── model_results.csv                 # posterior summaries (all models)
-│   ├── fitted_idatas/                    # ArviZ InferenceData (.nc) per model
-│   ├── fitted_idatas.pkl                 # all InferenceData objects
 │   ├── peak_age_posteriors_base.csv      # posterior peak age HDIs (base)
 │   ├── peak_age_posteriors_with_ext.csv  # posterior peak age HDIs (with_ext)
 │   ├── decline_rate_posteriors_base.csv  # decline rate posteriors (base)
@@ -69,7 +67,7 @@ Run scripts individually, or use the convenience script (requires the conda envi
 
 ```bash
 conda activate mlb-pitch-aging
-./run_pipeline.sh
+./scripts/run_full_pipeline.sh
 ```
 
 Or run steps individually:
