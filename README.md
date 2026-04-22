@@ -11,10 +11,10 @@ By: Ethan Wong
 This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate, and movement) using Statcast pitch-level data from 2015 to 2025. We use Bayesian multilevel modeling to provide among the first publicly documented Statcast-era aging curves with full posterior uncertainty on peak age estimates.
 
 **Key findings:**
-- Velocity peaks early and declines thereafter (−0.13 to −0.26 mph/yr depending on pitch type)
-- Spin peaks later than velocity (ages 25–32), suggesting a possible compensatory mechanism as pitchers age
-- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.5 to +8.3 years). Large gaps can highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
-- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.32–0.34), aligning with biomechanics indicating that harder throwers tend to spin the ball more
+- Velocity peaks early and declines thereafter (−0.02 to −0.19 mph/yr depending on pitch type)
+- Spin peaks later than velocity (ages 25.8–32.0), suggesting a possible compensatory mechanism as pitchers age
+- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.6 to +11.7 years). Large gaps can highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
+- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.31–0.33), aligning with biomechanics indicating that harder throwers tend to spin the ball more
 - Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries; mixed-effects models were employed to partially correct for this
 - *Note:* Spin axis analyses were explicitly removed from this study, as standard arithmetic models are systematically inappropriate for bounded circular directional data.
 
@@ -80,6 +80,9 @@ python src/data.py
 # 2. Join birth years, compute age, build master dataset
 python src/prepare.py
 
+# (Optional) Generate Exploratory Data Analysis (EDA) plots
+python src/eda_plots.py
+
 # 3. Fit univariate Bayesian mixed-effects models — primary results
 python src/models.py
 
@@ -118,7 +121,7 @@ v_t ~ N(0, σ²_v)   (year random intercept — partial pooling over seasons)
 - `age_c = age − mean(age)` (centered at the global sample mean, ≈28.9)
 - Year random intercept absorbs secular trends across pitching eras (e.g., the 2021 sticky-stuff crackdown)
 - `with_ext` experiment adds `mean_ext_c` as a fixed covariate. Extension is re-centered **per pitch type on the final analysis sample** (after the minimum-seasons filter), so `mean(mean_ext_c) = 0` in the exact data fed to each model. The base and with_ext models are fitted on independent samples: the base model does not require extension to be non-missing, preventing selection bias.
-- Two-pass screening: 500-draw screen pass to check significance; 2000-draw full fit only if any age coefficient's 95% HDI excludes zero
+- Two-pass screening: 500-draw screen pass (+500 tune) to check significance; 2000-draw full fit (+4000 tune) only if any age coefficient's 95% HDI excludes zero
 - Linear fallback: if the `age_c_sq` 95% HDI spans zero, a linear model is also fitted and PSIS-LOO is compared. The linear model is selected only if its ELPD-LOO exceeds the quadratic by more than 4 units; otherwise the quadratic is retained.
 
 Priors (weakly informative, scaled to each outcome's SD):
@@ -142,10 +145,11 @@ peak_age = age_mean + (−β₁ / 2β₂)
 
 Because `−β₁ / (2β₂)` is a ratio of two approximately normal quantities, its distribution is heavy-tailed (Cauchy-like) when β₂ is near zero or has mixed sign. To produce valid estimates:
 
-1. Only draws where `β₂ < 0` are used (physical requirement for a maximum, not a minimum)
-2. Computed peak ages are restricted to the plausible range [15, 50]
-3. At least 100 filtered draws are required; otherwise no peak age is reported
-4. The **posterior median** is reported (not the mean), since the mean is undefined or unstable for Cauchy-like distributions
+1. A peak age is only computed if the **majority (> 50%) of posterior draws** are physically valid (`β₂ < 0` indicating a maximum).
+2. Only the draws where `β₂ < 0` are evaluated.
+3. Computed peak ages are restricted to the plausible range [15, 50].
+4. At least 100 filtered draws are required; otherwise no peak age is reported.
+5. The **posterior median** is reported (not the mean), since the mean is undefined or unstable for Cauchy-like distributions.
 
 ### Bivariate — PyMC
 
