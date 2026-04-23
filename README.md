@@ -10,13 +10,37 @@ By: Ethan Wong
 
 This project builds aging curves for MLB pitcher **stuff** (velocity, spin rate, and movement) using Statcast pitch-level data from 2015 to 2025. We use Bayesian multilevel modeling to provide among the first publicly documented Statcast-era aging curves with full posterior uncertainty on peak age estimates.
 
+**Status:** Updated April 22, 2026 to match current code and generated outputs.
+
 **Key findings:**
-- Velocity peaks early and declines thereafter (−0.02 to −0.19 mph/yr depending on pitch type)
-- Spin peaks later than velocity (ages 25.8–32.0), suggesting a possible compensatory mechanism as pitchers age
-- The **Stuff Compensation Gap (SCG)**: spin peak age minus velocity peak age (ranges from −0.6 to +11.7 years). Large gaps can highlight the statistical challenge of deriving ratio-based peaks when quadratic curvature is weak.
-- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (ρ ≈ 0.31–0.33), aligning with biomechanics indicating that harder throwers tend to spin the ball more
+- Velocity decline at age 28 is strongest for SI/FF and weakest for FC (Table 1 point estimates: FF -0.156, SL -0.058, SI -0.189, CH -0.052, CU -0.047, FC -0.022 mph/year).
+- Spin peaks later than velocity for most pitch types (Table 2 spin peak ages: FF 29.99, SL 31.41, SI 30.11, CH 25.84, CU 32.01).
+- The **Stuff Compensation Gap (SCG)**, defined as spin peak age minus velocity peak age, ranges from -0.63 (CH) to +11.74 (SI) in univariate base models.
+- Bivariate modeling of velocity and spin reveals a positive pitcher-level correlation (FF rho_mean=0.307 [0.243, 0.368], SI rho_mean=0.334 [0.260, 0.410]).
 - Naive cross-sectional aging curves exhibit survivorship bias at both career boundaries; mixed-effects models were employed to partially correct for this
 - *Note:* Spin axis analyses were explicitly removed from this study, as standard arithmetic models are systematically inappropriate for bounded circular directional data.
+
+## Current Results Snapshot
+
+Main paper CSV outputs are written under `tables/` by `src/tables.py`:
+
+- `table1_velo_decline_rates.csv`: velocity decline rates at age 28 with 95% CIs
+- `table2_spin_peak_ages.csv`: spin peak ages with 95% CIs
+- `table3_bivariate_correlation.csv`: pitcher-level velocity/spin correlation from bivariate models
+
+Selected values from current outputs:
+
+| Metric | Current value |
+|--------|---------------|
+| Fastball (FF) velocity decline at age 28 | -0.156 mph/year (95% CI: -0.191, -0.124) |
+| Sinker (SI) velocity decline at age 28 | -0.189 mph/year (95% CI: -0.233, -0.138) |
+| Fastball (FF) spin peak age | 29.99 (95% CI: 28.54, 31.54) |
+| Curveball (CU) spin peak age | 32.01 (95% CI: 27.85, 36.72) |
+| Bivariate rho (FF) | 0.307 (95% HDI: 0.243, 0.368) |
+| Bivariate rho (SI) | 0.334 (95% HDI: 0.260, 0.410) |
+
+Univariate SCG summary (`master_data/scg_results.csv`): FF 8.71, SL 5.61, SI 11.74, CH -0.63, CU 5.37, FC 1.83.
+Bivariate SCG summary (`master_data/scg_bivariate_results.csv`): FF 8.60 [6.40, 10.91], SI 12.05 [8.31, 15.89].
 
 ---
 
@@ -29,12 +53,17 @@ mlb-pitch-aging/
 ├── master_data/
 │   ├── pitching_master.csv               # full dataset with age
 │   ├── model_results.csv                 # posterior summaries (all models)
+│   ├── model_results.log                 # univariate model run log
 │   ├── peak_age_posteriors_base.csv      # posterior peak age HDIs (base)
 │   ├── peak_age_posteriors_with_ext.csv  # posterior peak age HDIs (with_ext)
 │   ├── decline_rate_posteriors_base.csv  # decline rate posteriors (base)
 │   ├── decline_rate_posteriors_with_ext.csv
 │   ├── scg_results.csv                   # SCG univariate
-│   └── scg_bivariate_results.csv         # SCG bivariate
+│   ├── scg_bivariate_results.csv         # SCG bivariate
+│   ├── bivariate_base_FF.nc              # bivariate posterior (FF)
+│   ├── bivariate_base_SI.nc              # bivariate posterior (SI)
+│   └── fitted_idatas/                    # per-model posterior netCDF outputs
+├── logs/                                 # full pipeline execution logs
 ├── tables/
 │   ├── table1_velo_decline_rates.csv
 │   ├── table2_spin_peak_ages.csv
@@ -64,12 +93,16 @@ mlb-pitch-aging/
 
 ## Pipeline
 
-Run scripts individually, or use the convenience script (requires the conda environment to be active):
+Run scripts individually, or use the convenience script:
 
 ```bash
-conda activate mlb-pitch-aging
 ./scripts/run_full_pipeline.sh
 ```
+
+`run_full_pipeline.sh` will:
+- auto-activate the conda env (`mlb-pitch-aging`, configurable via `PIPELINE_CONDA_ENV`)
+- keep macOS awake during long runs via `caffeinate` when available
+- write a timestamped log file to `logs/full_pipeline_*.log`
 
 Or run steps individually:
 
@@ -102,7 +135,7 @@ python src/tables.py
 > **Note:** `models.py` is the bottleneck (~2.5 hrs for Bayesian screen+full passes across all models).
 > `bivariate.py` takes ~20–30 min for MCMC. All other scripts are fast.
 > If re-running after code fixes, you can skip `data.py`, `prepare.py`, and `models.py`
-> if `pitching_master.csv` and `fitted_idatas.pkl` are already present.
+> if `master_data/pitching_master.csv` and the needed files in `master_data/fitted_idatas/` are already present.
 
 ---
 
@@ -201,12 +234,17 @@ When bridging Lahman and Chadwick IDs, defensive deduplication (`drop_duplicates
 ## Environment
 
 ```bash
-conda create -n mlb-pitch-aging python=3.12
+conda env create -f environment.yml
 conda activate mlb-pitch-aging
-pip install pybaseball statsmodels bambi pymc arviz pandas matplotlib seaborn
 ```
 
-Tested on Python 3.12, macOS (Apple Silicon). All sampling runs on CPU via PyMC.
+Optional update after dependency changes:
+
+```bash
+conda env update -n mlb-pitch-aging -f environment.yml --prune
+```
+
+Tested on Python 3.12, macOS (Apple Silicon).
 
 ---
 
